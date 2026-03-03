@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Sandbox for AI related proofs-of-concept"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = [
+dependencies = []
+
+[dependency-groups]
+dev = [
     "pre-commit>=4.5.1",
     "ruff>=0.15.4",
 ]
