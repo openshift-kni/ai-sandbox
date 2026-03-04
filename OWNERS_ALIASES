@@ -1,0 +1,14 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+aliases:
+  ai-sandbox-approvers:
+    - imiller0
+    - browsell
+    - abraham2512
+    - pixelsoccupied
+    - Tal-or
+  ai-sandbox-reviewers:
+    - imiller0
+    - browsell
+    - abraham2512
+    - pixelsoccupied
+    - Tal-or
