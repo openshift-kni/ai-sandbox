@@ -1,8 +1,11 @@
-.PHONY: init test-ci lint setup setup-rh-pre-commit
+.PHONY: init test-ci lint setup setup-rh-pre-commit install-uv
 
-init: setup-rh-pre-commit
+install-uv:
+	@command -v uv >/dev/null 2>&1 || { echo "Installing uv..."; curl -LsSf https://astral.sh/uv/install.sh | sh; }
 
-test-ci: lint
+init: install-uv setup-rh-pre-commit
+
+test-ci: install-uv lint
 
 lint:
 	uv run ruff check .
