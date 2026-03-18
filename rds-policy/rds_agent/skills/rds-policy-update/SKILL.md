@@ -113,7 +113,34 @@ the updated checklist to the user after MERGE completes.
   functionality" input). Process the partner's CRs one by one against
   the reference changes -- not the other way around.
 
-## Output
+## Output Workflow
+
+MERGE writes changes into a **clone of the partner's repo**, not to a
+separate temp directory. This gives the user a proper git diff they can
+review and push.
+
+### Steps
+
+1. **Clone** the partner's policy repo (URL or local path) into a temp
+   working directory (e.g. `/tmp/rds-merge-{target}/`).
+   - For internal GitLab with self-signed certs, use
+     `GIT_SSL_NO_VERIFY=1` on the clone.
+   - Ask the user for permission before cloning.
+2. **Create** a new version directory alongside the existing one
+   (e.g. `version_4.20/` next to `version_4.18.5/`).
+   - Copy the partner's current version directory as the starting point.
+   - Apply all merge changes to the new directory.
+3. **Update source-crs/** for the target version. Either:
+   - Extract from ZTP container: `oc image extract
+     quay.io/openshift-kni/ztp-site-generator:{version}
+     --path /home/ztp/source-crs/:source-crs/ --confirm`
+   - Or copy from local reference if available (e.g. `ref-4.20/source-crs/`).
+4. **Show the diff** using `git diff` (or `git diff --stat` for summary)
+   so the user can review all changes in context.
+5. The user pushes when ready -- never push on their behalf without
+   explicit permission.
+
+### Artifact Checklist
 
 Always output a complete artifact set -- do not ask whether to include
 parts of it:
@@ -123,6 +150,3 @@ parts of it:
 - Hub template ConfigMaps (as needed)
 
 Flag new hub template variables that need per-cluster values populated.
-
-Write output to a separate directory -- never modify source policies
-directly. Present as PR diff or directory listing for user review.
