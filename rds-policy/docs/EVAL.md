@@ -79,7 +79,11 @@ so results are reproducible and don't depend on live container extraction.
 The key is testing **types of merge behaviors**, not specific CRs. Each
 test fixture should exercise one or more of these scenarios:
 
-### Field-level changes
+### User content overwrites reference updates
+
+The underlying rule: ensure the changes in the reference are implemented
+in the new policy set, but if the user has explicit patches which overwrite
+those changes, suggest the aligned result but ask for confirmation.
 
 - **New field in reference, no user overlap** — trivial case. New content
   comes from base source-crs with nothing to reconcile.
@@ -89,11 +93,7 @@ test fixture should exercise one or more of these scenarios:
 - **New field in reference, overlaps user overlay (different)** — propose
   aligned result but ask for confirmation.
 
-### Channel / version handling
-
-The underlying rule: ensure the changes in the reference are implemented
-in the new policy set, but if the user has explicit patches which overwrite
-those changes, suggest the aligned result but ask for confirmation.
+Examples using channel fields (same pattern applies to any field):
 
 - 4.18 and 4.20 reference both use "stable", PG has no patch to the
   channel → resulting policy simply uses value from reference (no
@@ -104,7 +104,7 @@ those changes, suggest the aligned result but ask for confirmation.
   to clean it up (remove the patch)
 - 4.18 is "stable" and 4.20 is "stable-v2", no user patch → result uses
   reference CR and gets "stable-v2"
-- 4.18 is "stable" and 4.20" is "stable-v2", user patch with "stable" →
+- 4.18 is "stable" and 4.20 is "stable-v2", user patch with "stable" →
   agent proposes removing patch to align with reference but asks for
   confirmation of action to take
 
@@ -212,19 +212,44 @@ evals/files/partner-pinned"`
 - DisconnectedICSP → IDMS migration still handled correctly
 - Output is well-formed PolicyGenerator YAML
 
-## Future Test Cases
+## Coverage
 
-- **MERGE — fuzzy matching**: partner with renamed SRIOV/PTP CRs
-- **MERGE — GVK replacement**: partner has customized ICSP → IDMS migration
-- **MERGE — user restructured policies**: same CRs, different file organization
-- **MERGE — user removed optional CRs**: verify carry-through + status notes
-- **MERGE — user removed required CRs**: verify warning
-- **MERGE — mustnothave conflict**: reference adds removal, user has overlay
-- **MERGE — replicated CRs**: same CR referenced multiple times
-- **MERGE — binding rule updates**: version labels across renamed policies
-- **VALIDATE**: dry-run against a hub (needs cluster access)
-- **Full flow**: EXPLAIN → MERGE → VALIDATE end-to-end
-- **Triggering**: various prompt phrasings, negative triggers
+### Triggering
+- [ ] Triggers on upgrade request
+- [ ] Triggers on diff/explain request
+- [ ] Triggers on casual phrasing
+- [ ] Does NOT trigger on unrelated prompts
+
+### EXPLAIN
+- [ ] Identifies key changes (GVK replacements, renames, new CRs)
+- [ ] Does not ask for partner policies
+- [ ] Handles path reorganization as non-breaking
+
+### MERGE
+- [ ] New field, no user overlap
+- [ ] New field, overlaps user overlay (aligned)
+- [ ] New field, overlaps user overlay (different)
+- [ ] User restructures policies
+- [ ] User adds new CRs
+- [ ] User replicates a reference CR
+- [ ] PTP one-of selection
+- [ ] User removes optional CRs
+- [ ] User removes required CRs
+- [ ] Reference adds mustnothave + user has overlay
+- [ ] Binding rule updates
+- [ ] Output validation (well-formed PolicyGenerator YAML)
+
+### Workflow
+- [ ] EXPLAIN runs before asking for merge inputs
+
+### Safety
+- [ ] No kubectl apply without dry-run
+
+### VALIDATE
+- [ ] Dry-run against hub
+
+### End-to-end
+- [ ] Full flow: EXPLAIN → MERGE → VALIDATE
 
 ## Iteration Process
 
