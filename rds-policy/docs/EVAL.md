@@ -17,43 +17,12 @@ Three capabilities, in order of risk:
 
 ## How We're Testing
 
-Following the [agentskills.io eval framework](https://agentskills.io/skill-creation/evaluating-skills).
+Using [promptfoo](https://promptfoo.dev) with the
+`anthropic:claude-agent-sdk` provider. Following the
+[agentskills.io eval framework](https://agentskills.io/skill-creation/evaluating-skills)
+for test design principles.
 
-### What is Eval?
-
-Eval (evaluation) is how you measure whether an AI agent produces correct,
-consistent outputs. The general pattern:
-
-1. Define test cases with inputs and expected outputs
-2. Run the agent against each test case
-3. Grade the outputs — either programmatically (assertions) or via
-   human review or LLM-as-judge
-4. Track results across iterations to measure improvement
-
-This is analogous to integration testing for traditional software, but
-outputs are non-deterministic so grading requires more nuance than
-pass/fail assertions alone.
-
-### Approach
-
-1. Define test cases in `evals/evals.json` (prompt + expected output + input files)
-2. Run test cases, review outputs manually (first round — no assertions yet)
-3. Add assertions based on what we observe
-4. Iterate on skill, re-run and compare across iterations
-
-### How to Run
-
-Options (in order of complexity):
-- **Manual** — run each prompt in a coding agent, review output. Good
-  for early iteration.
-- **CLI** — use the agent's non-interactive mode for scripted runs.
-  Can be looped in a bash script over `evals.json`.
-- **API** — inject skill content as system prompt, send test prompts
-  programmatically. Works in CI.
-- **Open frameworks** — config-driven eval with built-in grading,
-  comparison, and reporting.
-
-TBD: pick an approach and implement once we have more test cases.
+Test config: `evals/promptfooconfig.yaml`. Run with `make eval` from `evals/`.
 
 ### Test Fixtures
 
