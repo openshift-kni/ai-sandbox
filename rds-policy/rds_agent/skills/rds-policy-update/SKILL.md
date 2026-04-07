@@ -159,7 +159,8 @@ review and push.
    - Copy the partner's current version directory as the starting point.
 4. **Replace source-crs/** for the target version. Either:
    - Extract from ZTP container:
-     ```
+     ```bash
+     podman login registry.redhat.io
      podman pull registry.redhat.io/openshift4/ztp-site-generate-rhel8:{version}
      id=$(podman create registry.redhat.io/openshift4/ztp-site-generate-rhel8:{version})
      podman cp $id:/home/ztp/source-crs/ source-crs/
@@ -202,10 +203,16 @@ After processing all checklist items, walk the version-bumping section:
   If a tag doesn't match the current version (partner pinned it to
   something else), mark with `⚠ REVIEW` and ask the user.
 
+### Parent Kustomization
+
+After creating the new version directory, update the `kustomization.yaml`
+in the parent directory to add the new version directory.
+
 ### Finish
 
 1. **Show the diff** using `diff -u` between old and new version
    directories so the user can review all PolicyGenerator changes.
+   Include the parent `kustomization.yaml` diff.
 2. **Present the completed checklist** with status for each item:
    `[x]` applied, `[!]` flagged for review, `[-]` N/A.
 3. The user pushes when ready -- never push on their behalf without
