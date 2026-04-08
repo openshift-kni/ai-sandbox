@@ -3,10 +3,16 @@
 ## Reference Source
 
 Reference CRs and PolicyGenerator examples are extracted from the ZTP site
-generator container: `quay.io/openshift-kni/ztp-site-generator:{version}`
+generator container: `registry.redhat.io/openshift4/ztp-site-generate-rhel8:{version}`
 (e.g. `:4.18`, `:4.20`).
 
-Extract with: `oc image extract quay.io/openshift-kni/ztp-site-generator:{version} --path /home/ztp/:{output_dir} --confirm`
+Extract with:
+```
+podman pull registry.redhat.io/openshift4/ztp-site-generate-rhel8:{version}
+id=$(podman create registry.redhat.io/openshift4/ztp-site-generate-rhel8:{version})
+podman cp $id:/home/ztp/ {output_dir}
+podman rm $id
+```
 
 If a `fetch_reference` MCP tool is available, use it. Otherwise run
 extraction directly via shell.
