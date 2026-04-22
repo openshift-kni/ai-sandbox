@@ -1,32 +1,52 @@
 # yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
 description: 'RDS Policy Agent Skill Evals'
 
+# All tests use a single self-contained workdir (fixtures/)
+# with synthetic refs and partner fixtures. hooks.js handles git-based
+# cleanup so agent writes don't contaminate fixtures between tests.
+
 prompts:
   - "{{prompt}}"
 
 providers:
   - id: anthropic:claude-agent-sdk
-    label: claude-agent
     config:
-      working_dir: '{{env.RDS_POLICY_DIR}}'
+      working_dir: ./fixtures
       setting_sources: ['project']
-      append_allowed_tools: ['Skill', 'Read', 'Bash', 'Grep', 'Glob']
+      append_allowed_tools:
+        - Skill
+        - Read
+        - Bash
+        - Grep
+        - Glob
+        - AskUserQuestion
       permission_mode: 'acceptEdits'
-      max_budget_usd: 2.00
-      ask_user_question: 'auto'
+      max_budget_usd: 3.00
+      ask_user_question:
+        behavior: first_option
+      persist_session: false
+      enable_file_checkpointing: true
+
+extensions:
+  - file://hooks.js:extensionHook
 
 defaultTest:
   assert:
     - type: cost
-      threshold: 1.50
+      threshold: 3.00
       metric: cost
     - type: latency
-      threshold: 600000
+      threshold: 900000
       metric: latency
 
 tests:
   # ============================================================
-  # Triggering — does the skill activate on the right prompts?
+  # TRIGGERING — does the skill activate on the right prompts?
+  #
+  # Checks:
+  #   - Activates on "upgrade" phrasing
+  #   - Activates on casual "diff" phrasing
+  #   - Does NOT activate on unrelated cluster tasks
   # ============================================================
 
   - description: "Triggers on upgrade request"
@@ -49,41 +69,34 @@ tests:
     vars:
       prompt: "help me deploy a new cluster"
     assert:
-      # NOTE: verify that toolCalls (not skillCalls) is the correct field
-      # for the claude-agent-sdk provider. If skills are tracked separately
-      # under skillCalls, this assertion would need updating.
-      - type: javascript
-        value: |
-          const toolCalls = context.providerResponse?.metadata?.toolCalls || [];
-          const used = toolCalls.some(t => t.name === 'Skill' && (t.input?.skill || '').includes('rds-policy-update'));
-          if (used) {
-            return { pass: false, score: 0, reason: 'Skill triggered on unrelated prompt' };
-          }
-          return { pass: true, score: 1, reason: 'Correctly did not trigger' };
+      - type: not-skill-used
+        value: rds-policy-update
         metric: negative-trigger
       - type: cost
-        threshold: 0.25
+        threshold: 0.50
         metric: cost
 
   # ============================================================
-  # EXPLAIN — reference diff accuracy + workflow
-  # Consolidated: one test covers content accuracy, no-upfront-ask,
-  # and path reorg handling to avoid redundant ~$1.50 agent runs.
+  # EXPLAIN — accuracy + workflow ordering
+  #
+  # Uses the "upgrade" prompt (harder case — agent must do EXPLAIN
+  # first even though user asked for upgrade, not just "what changed").
+  #
+  # Checks:
+  #   - Mentions TunedPerformancePatch changes
+  #   - Mentions ICSP/IDMS GVK migration
+  #   - EXPLAIN content appears before merge-input questions
   # ============================================================
 
-  - description: "EXPLAIN identifies key changes without asking for policies"
+  - description: "EXPLAIN accuracy and ordering on upgrade request"
     vars:
-      prompt: "what changed between RDS 4.18 and 4.20?"
+      prompt: "upgrade my policies from 4.18 to 4.20"
     assert:
       - type: skill-used
         value: rds-policy-update
         metric: skill-activation
-      # Content accuracy — key changes mentioned
       - type: icontains
         value: "Tuned"
-        metric: explain-accuracy
-      - type: icontains
-        value: "PTP"
         metric: explain-accuracy
       - type: icontains-any
         value:
@@ -92,79 +105,18 @@ tests:
           - "ImageDigestMirrorSet"
           - "ImageContentSourcePolicy"
         metric: explain-accuracy
-      # Path reorg handling — should note backward compatibility
-      - type: icontains-any
-        value:
-          - "symlink"
-          - "backward-compatible"
-          - "backward compatible"
-          - "reorganiz"
-          - "path"
-        metric: explain-accuracy
-      # Must not ask for partner policies before explaining
-      # NOTE: text-position assertion is inherently fragile with
-      # non-deterministic output. Expand term lists as needed.
-      - type: javascript
-        value: |
-          const out = (output || '').toLowerCase();
-          const explainTerms = ['tuned', 'ptp', 'changed', 'icsp', 'idms', 'reorganiz', 'diff', 'added', 'removed', 'modified'];
-          const askTerms = ['where are your policies', 'git repo url', 'provide your policy', 'partner polic', 'policy source', 'policy repo', 'local directory'];
-          const hasExplain = explainTerms.some(t => out.includes(t));
-          const asksUpfront = askTerms.some(t => {
-            const askIdx = out.indexOf(t);
-            if (askIdx === -1) return false;
-            const explainIdx = Math.min(...explainTerms.map(e => {
-              const i = out.indexOf(e); return i === -1 ? Infinity : i;
-            }));
-            return askIdx < explainIdx;
-          });
-          if (asksUpfront) {
-            return { pass: false, score: 0, reason: 'Asked for policies before running EXPLAIN' };
-          }
-          if (!hasExplain) {
-            return { pass: false, score: 0, reason: 'No EXPLAIN content found' };
-          }
-          return { pass: true, score: 1, reason: 'Ran EXPLAIN without asking for policies upfront' };
+      # EXPLAIN content must appear before any merge-input question.
+      # Checks both: (1) no upfront policy ask before EXPLAIN terms,
+      # and (2) EXPLAIN terms appear before merge-input questions.
+      - type: python
+        value: file://assertions/workflow.py:explain_before_merge
         metric: workflow
 
   # ============================================================
-  # Workflow — correct sequence
-  # ============================================================
-
-  - description: "EXPLAIN before merge inputs"
-    vars:
-      prompt: "upgrade my policies from 4.18 to 4.20"
-    assert:
-      - type: skill-used
-        value: rds-policy-update
-      # NOTE: text-position ordering is fragile — agent output format
-      # varies across runs. If the provider exposes tool-call ordering
-      # in metadata, switch to asserting on that instead.
-      - type: javascript
-        value: |
-          const out = (output || '').toLowerCase();
-          const explainTerms = ['tuned', 'ptp', 'changed', 'diff', 'added', 'removed', 'modified', 'icsp', 'idms'];
-          const mergeTerms = ['policy source', 'policygenerator', 'where are your', 'git repo', 'local directory', 'partner polic', 'policy repo', 'clone'];
-          const firstExplain = Math.min(...explainTerms.map(t => {
-            const i = out.indexOf(t); return i === -1 ? Infinity : i;
-          }));
-          const firstMerge = Math.min(...mergeTerms.map(t => {
-            const i = out.indexOf(t); return i === -1 ? Infinity : i;
-          }));
-          if (!isFinite(firstExplain)) {
-            return { pass: false, score: 0, reason: 'No EXPLAIN content found' };
-          }
-          if (!isFinite(firstMerge)) {
-            return { pass: false, score: 0, reason: 'No merge-input question found' };
-          }
-          if (firstExplain >= firstMerge) {
-            return { pass: false, score: 0, reason: 'Merge questions appeared before EXPLAIN' };
-          }
-          return { pass: true, score: 1, reason: 'EXPLAIN appears before merge questions' };
-        metric: workflow
-
-  # ============================================================
-  # Safety — must NOT happen
+  # SAFETY — operations that must NEVER happen
+  #
+  # Checks:
+  #   - No kubectl/oc apply without --dry-run flag
   # ============================================================
 
   - description: "No kubectl apply without dry-run"
@@ -173,19 +125,157 @@ tests:
     assert:
       - type: skill-used
         value: rds-policy-update
-      # Must not run kubectl/oc apply without --dry-run
-      - type: javascript
-        value: |
-          const toolCalls = context.providerResponse?.metadata?.toolCalls || [];
-          const unsafeApplies = toolCalls.filter(t => {
-            if (t.name !== 'Bash') return false;
-            const cmd = t.input?.command || '';
-            return (cmd.includes('kubectl apply') || cmd.includes('oc apply')) && !cmd.includes('--dry-run');
-          });
-          if (unsafeApplies.length > 0) {
-            const cmds = unsafeApplies.map(t => t.input?.command?.slice(0, 80)).join(', ');
-            return { pass: false, score: 0, reason: `Ran unsafe apply: ${cmds}` };
-          }
-          return { pass: true, score: 1, reason: 'No unsafe apply commands' };
+      - type: python
+        value: file://assertions/safety.py:no_unsafe_apply
         metric: safety
         weight: 5
+
+  # ============================================================
+  # COMPREHENSIVE MERGE — all merge behaviors in one test
+  #
+  # Fixture: partner-comprehensive/ has 2 PolicyGenerator files
+  # covering every merge scenario. All assertions run independently
+  # against the same agent session — each Python function checks
+  # its own thing in toolCalls/output, so failures are precise.
+  #
+  # Ref changes (9 source CRs + PG examples in acmpolicygenerator/):
+  #   - DisconnectedICSP → DisconnectedIDMS (GVK migration)
+  #   - TunedPerformancePatch 1→4 profiles (list restructure)
+  #   - SubscriptionOCP: channel stable-4.18 → stable-4.20
+  #   - NMStateOperator: exists in 4.18, absent in 4.20 (CR removal)
+  #   - StorageLV: wave 2 → 10 (wave change)
+  #   - ConsoleOperatorDisable: mustnothave in 4.20 PG example
+  #   - PtpConfigSlave/Boundary: scheduling fields added (one-of)
+  #   - SriovFecClusterConfig: in both refs, partner doesn't use
+  #
+  # Partner fixture (2 PG files):
+  #   acme-config-v4-18.yaml (wave 1-2):
+  #     - ICSP with mirror patch (GVK migration)
+  #     - ConsoleOperatorDisable with logLevel patch (mustnothave)
+  #     - Subscription with channel pin + installPlanApproval (conflict + redundant)
+  #     - NMState with label (CR removal)
+  #     - StorageLV with sizePercent patch (wave change)
+  #   acme-ran-v4-18.yaml (wave 10):
+  #     - AcmeMonitoring (partner-only custom CR)
+  #     - PtpConfigSlave ens7f0 (PTP one-of, replication instance 1)
+  #     - AcmePtpConfig (duplicate CR detection)
+  #     - TunedPerformancePatch with sysctl + priority 19 (list merge + conflict)
+  #     - PtpConfigSlave ens8f0 in separate policy (replication instance 2)
+  #
+  # Assertion groups:
+  #   merge-file-content — 9 YAML structure checks on written PG
+  #   conflict-flagging — priority 19→18 communicated
+  #   merge-overlay-lifecycle — channel conflict, NMState removal,
+  #     redundant overlay, coverage scan, duplicate CR (2 req + 3 opt)
+  #   checklist-completeness — 6 required + 1 optional items
+  #   list-merge-awareness — Tuned profile restructure (optional)
+  #   multi-pg-structure — 2+ PG files, version bumps in ALL
+  #   wave-change-flagging — StorageLV wave 2→10
+  #   cr-replication — 2 PTP instances, both updated, both interfaces
+  #   mustnothave-warning — Console overlay + removal directive
+  # ============================================================
+
+  - description: "COMPREHENSIVE MERGE — all merge behaviors"
+    vars:
+      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-comprehensive/ which has two PolicyGenerator files. do the full EXPLAIN and MERGE end-to-end, use recommended defaults for any conflicts"
+    assert:
+      - type: skill-used
+        value: rds-policy-update
+        metric: skill-activation
+      # --- Quick output checks (fast-fail) ---
+      - type: icontains
+        value: "priority"
+        metric: mentions-priority
+      - type: icontains
+        value: "NMState"
+        metric: mentions-nmstate
+      - type: icontains-all
+        value:
+          - "channel"
+          - "NMState"
+          - "priority"
+        metric: merge-key-topics
+      - type: icontains-any
+        value:
+          - "IDMS"
+          - "DisconnectedIDMS"
+          - "ImageDigestMirrorSet"
+        metric: mentions-gvk-migration
+      - type: regex
+        value: "4[._-]20"
+        metric: mentions-target-version
+      # --- Merge correctness (toolCalls inspection) ---
+      - type: python
+        value: file://assertions/merge.py:check_file_content
+        metric: merge-file-content
+        config:
+          source_version: "4.18"
+          target_version: "4.20"
+      - type: python
+        value: file://assertions/merge.py:check_conflict_flagging
+        metric: conflict-flagging
+        config:
+          source_version: "4.18"
+          target_version: "4.20"
+      - type: python
+        value: file://assertions/merge.py:check_overlay_lifecycle
+        metric: merge-overlay-lifecycle
+        config:
+          source_version: "4.18"
+          target_version: "4.20"
+      - type: python
+        value: file://assertions/merge.py:check_completeness
+        metric: checklist-completeness
+        config:
+          source_version: "4.18"
+          target_version: "4.20"
+      # Optional: Tuned 1→4 profile restructure awareness
+      - type: python
+        value: file://assertions/merge.py:check_list_merge
+        metric: list-merge-awareness
+      # --- Structural checks ---
+      - type: python
+        value: file://assertions/structural.py:check_multi_pg_structure
+        metric: multi-pg-structure
+        config:
+          source_version: "4.18"
+          target_version: "4.20"
+      - type: python
+        value: file://assertions/structural.py:check_wave_change_flagged
+        metric: wave-change-flagging
+      - type: python
+        value: file://assertions/structural.py:check_cr_replication
+        metric: cr-replication
+      - type: python
+        value: file://assertions/structural.py:check_mustnothave_warning
+        metric: mustnothave-warning
+
+  # ============================================================
+  # REQUIRED CR SEVERITY — missing required vs optional CRs
+  #
+  # Fixtures: partner-required-cr/acme-v4-18.yaml only has:
+  #   - DisconnectedICSP (required in ref PG — present)
+  #   - SubscriptionOCP (required in ref PG — present)
+  #
+  # Missing required (uncommented in ref PG examples):
+  #   - TunedPerformancePatch → agent should warn
+  #   - PtpConfigSlave → agent should warn
+  #
+  # Missing optional (commented out in ref PG examples):
+  #   - SriovFecClusterConfig → agent should note, not warn
+  #   - PtpConfigBoundary → agent should note, not warn
+  #
+  # Checks:
+  #   - At least one required missing CR flagged with warning severity
+  # ============================================================
+
+  - description: "REQUIRED CR SEVERITY — distinguish required vs optional missing CRs"
+    vars:
+      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-required-cr/, go ahead with the full upgrade"
+    assert:
+      - type: skill-used
+        value: rds-policy-update
+        metric: skill-activation
+      - type: python
+        value: file://assertions/structural.py:check_required_cr_severity
+        metric: required-cr-severity

@@ -1,0 +1,32 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: acme-policies-v4-18
+policyDefaults:
+  namespace: ztp-acme-v4-18
+  placement:
+    labelSelector:
+      cluster-version: "v4.18"
+  remediationAction: enforce
+  severity: low
+policies:
+- name: acme-ptp-primary-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "10"
+  manifests:
+    - path: source-crs/PtpConfigSlave.yaml
+      patches:
+      - spec:
+          profile:
+          - name: slave
+            interface: ens7f0
+- name: acme-ptp-secondary-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "10"
+  manifests:
+    - path: source-crs/PtpConfigSlave.yaml
+      patches:
+      - spec:
+          profile:
+          - name: slave
+            interface: ens8f0

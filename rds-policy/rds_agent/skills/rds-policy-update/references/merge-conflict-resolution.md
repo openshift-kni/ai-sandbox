@@ -12,6 +12,15 @@ Reference changes fields the partner hasn't customized -- apply automatically.
 Example: reference bumps `spec.channel: "4.18"` to `"4.20"`, partner hasn't
 patched channel -- update automatically.
 
+## Redundant Overlays
+
+Partner patches a field to the same value the reference already has. The
+patch is unnecessary -- it does nothing. Note it as redundant in the
+checklist so the partner can clean it up if they choose.
+
+Example: reference has `spec.channel: "stable"`, partner patches channel
+to `"stable"` -- redundant, mark as `[!] redundant overlay, consider removing`.
+
 ## True Conflicts
 
 Both sides changed the same field. Flag for human review with:
@@ -47,6 +56,23 @@ policy based on:
 3. If no clear fit, ask the user which policy to add it to
 
 Preserve partner naming conventions for the policy.
+
+## Partner-Duplicated CRs
+
+A partner may have created their own variant of a reference CR --
+same GVK and purpose but different name or modified content (e.g. a
+custom `AcmePerformanceProfile.yaml` that's a fork of the reference
+`PerformanceProfile.yaml`). This means the partner doesn't benefit
+from upstream fixes and improvements to the source CR.
+
+Detection: during matching, if a partner manifest's GVK and key fields
+closely match a reference source CR but the path or resource name
+differs, it may be a duplicate.
+
+Action: flag it and suggest migrating back to the reference source CR
+with patches for their customizations. Present the diff between their
+variant and the reference CR so they can see what they'd gain. Do not
+silently replace -- the partner may have a reason for the fork.
 
 ## Version-Pinned Values
 
