@@ -1,0 +1,40 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: acme-ran-v4-18
+policyDefaults:
+  namespace: ztp-acme-v4-18
+  placement:
+    labelSelector:
+      cluster-version: "v4.18"
+      acme-policy: "v1"
+  remediationAction: enforce
+  severity: low
+policies:
+- name: acme-ran-config-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "10"
+  manifests:
+    - path: custom-crs/AcmeMonitoring.yaml
+    - path: source-crs/PtpConfigSlave.yaml
+      patches:
+      - spec:
+          profile:
+          - name: slave
+            interface: ens7f0
+    - path: source-crs/TunedPerformancePatch.yaml
+      patches:
+      - spec:
+          profile:
+          - name: performance-patch
+            data: |
+              [main]
+              summary=ACME custom tuning
+              include=openshift-node-performance-openshift-node-performance-profile
+              [sysctl]
+              kernel.timer_migration=0
+          recommend:
+          - machineConfigLabels:
+              machineconfiguration.openshift.io/role: "master"
+            priority: 19
+            profile: performance-patch

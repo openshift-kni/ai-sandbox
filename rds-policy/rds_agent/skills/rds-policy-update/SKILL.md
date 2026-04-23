@@ -64,7 +64,9 @@ to merge.
 ## EXPLAIN Workflow
 
 1. **Locate references** -- check for local `ref-{version}/` directories
-   first. Fall back to ZTP container extraction if not available.
+   first. If they exist and contain `source-crs/`, use them as-is -- do
+   NOT extract from containers. Only fall back to ZTP container extraction
+   if no local ref directories are found.
 2. **Diff PolicyGenerator examples** (`acm-*-ranGen.yaml`) between versions.
    These are the high-level view of what changed.
 3. **Diff source-crs content** -- for CRs that changed, compare the actual
@@ -79,11 +81,17 @@ to merge.
 
 Save two files:
 
-1. **EXPLAIN report** (`/tmp/rds-explain-{old}-to-{new}.md`) -- full
-   analysis of what changed between versions.
+Generate a timestamp with `date +%Y%m%d-%H%M%S` and include it in
+output filenames so multiple runs don't overwrite each other.
 
-2. **Merge checklist** (`/tmp/rds-merge-checklist-{old}-to-{new}.md`) --
-   separate file, the **driver for MERGE**. Each item names the specific
+1. **EXPLAIN report** (`/tmp/rds-explain-{old}-to-{new}-{timestamp}.md`) --
+   full analysis of what changed between versions.
+
+2. **Merge checklist** (`/tmp/rds-merge-checklist-{old}-to-{new}-{timestamp}.md`) --
+   the **single working document that drives MERGE**. Start with `[ ]`
+   unchecked items. During MERGE, update this same file in place --
+   marking each item as `[x]`, `[!]`, `[-]`, or `[~]` as it's processed.
+   Do not create a separate "completed" file. Each item names the specific
    CR, what changed, and the action to take. For example:
 
    ```
@@ -139,6 +147,22 @@ Save two files:
   functionality" input). Process the partner's CRs one by one against
   the reference changes -- not the other way around.
 
+- After processing the checklist, do a **full coverage scan**: compare
+  the reference subscription/CR set against the partner's set. For
+  reference CRs the partner does not include, distinguish severity:
+  - **Required CRs** (present in all reference PolicyGenerator examples
+    and not commented out) -- explicitly warn: "WARNING: required CR
+    {name} is not included in your policies." Use the word "required"
+    and "warning" so the severity is clear.
+  - **Optional CRs** (commented out or only in some examples) -- note
+    as "not included" without warning language.
+  In both cases, don't add them -- the partner may have intentionally
+  removed them.
+
+- Check partner patches against current reference values, not just
+  changes. A patch that sets a field to the same value the reference
+  already has is redundant -- flag it so the partner can clean up.
+
 ## MERGE Workflow
 
 MERGE writes changes into a **clone of the partner's repo**, not to a
@@ -173,20 +197,50 @@ review and push.
 
 ### Processing (checklist-driven)
 
-Walk the merge checklist item by item. For each item:
+**Preserve the partner's PolicyGenerator structure.** The partner may
+organize CRs differently from the reference -- different number of
+PolicyGenerator files, different policy groupings, different names.
+Always follow the partner's structure. If the reference moved a CR
+to a different wave or policy, note it and ask for confirmation
+rather than silently reorganizing.
+
+**Write complete PolicyGenerator files.** Each merged PG file must
+contain ALL manifests from the partner's original -- not just the ones
+that changed. Start by copying the partner's PG content, then apply
+changes in place. Never write a partial PG with only modified manifests.
+
+Walk the merge checklist item by item. The checklist is a **working
+document** -- update statuses in the file as you process each item:
+- `[x]` applied automatically (include what changed)
+- `[!]` needs user decision (include options)
+- `[-]` N/A (partner doesn't use this CR)
+- `[~]` redundant overlay (partner patch matches reference value)
+
+For each item:
 
 1. **Find affected partner CRs** -- scan partner PolicyGenerator YAML(s)
    for manifests that reference the same GVK. Use matching heuristics
    from `references/cr-matching-heuristics.md`.
+   - A partner may use the same source CR in multiple manifests. Apply
+     reference changes to ALL instances. If patches differ between
+     instances, flag each one separately.
 2. **Apply the change** if it doesn't conflict with partner customizations.
+   This includes new fields the reference added to an existing CR -- if
+   the partner hasn't patched that field, add it to their patches. For
+   example, if the reference adds `ptpSchedulingPolicy: SCHED_FIFO` to
+   PtpConfigSlave and the partner only patches `interface`, add the
+   scheduling fields to the partner's patches.
+   Mark as `[x]` in the checklist with a note of what changed.
 3. **Flag for user review** if:
    - Partner has customized the same field the reference changed (true conflict)
    - Partner has pinned a value the checklist says to bump (e.g. older
      CatalogSource image tag)
    - The change is a GVK replacement and partner has non-trivial patches
    - You're not 100% sure the change is safe
-4. **Check off the item** in the checklist.
-5. If the partner doesn't use the CR at all, mark as N/A and move on.
+   Mark as `[!]` in the checklist. After processing all items, ask the
+   user about each `[!]` item before finalizing. Do not silently pick
+   a resolution -- present the options and let the user choose.
+4. If the partner doesn't use the CR at all, mark as `[-]` and move on.
 
 **When uncertain: leave it alone and highlight it.** Never silently
 apply a change you're not confident about. It's better to flag 5 things
@@ -210,12 +264,29 @@ in the parent directory to add the new version directory.
 
 ### Finish
 
-1. **Show the diff** using `diff -u` between old and new version
+1. **Coverage scan** (mandatory) -- compare the reference PG examples
+   against the partner's CR set. For each reference CR the partner does
+   not include:
+   - **Required** (uncommented in ref PG examples): print
+     `WARNING: required CR {name} is not included in your policies.`
+   - **Optional** (commented out in ref PG examples): note as
+     `{name}: not included (optional)`
+   Do not add missing CRs -- just report them.
+2. **Show the diff** using `diff -u` between old and new version
    directories so the user can review all PolicyGenerator changes.
    Include the parent `kustomization.yaml` diff.
-2. **Present the completed checklist** with status for each item:
-   `[x]` applied, `[!]` flagged for review, `[-]` N/A.
-3. The user pushes when ready -- never push on their behalf without
+3. **Present the merge checklist** -- by this point every item in
+   `/tmp/rds-merge-checklist-{old}-to-{new}-{timestamp}.md` must have
+   a status. This is mandatory, not a free-form summary. Every CR the
+   partner uses must appear with status:
+   - `[x]` applied automatically (include what changed)
+   - `[!]` flagged for review (include why and what was decided)
+   - `[-]` N/A (partner doesn't use this CR)
+   - `[~]` redundant overlay (partner patch matches reference value)
+   Include CRs the partner removed (present in reference but absent
+   from partner policies) so nothing is silently skipped. No item
+   may be left unchecked.
+4. The user pushes when ready -- never push on their behalf without
    explicit permission.
 
 ### Artifact Checklist

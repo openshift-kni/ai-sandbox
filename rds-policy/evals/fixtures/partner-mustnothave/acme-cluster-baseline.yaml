@@ -1,0 +1,28 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: acme-cluster-baseline
+policyDefaults:
+  namespace: ztp-acme
+  placement:
+    labelSelector:
+      cluster-version: "v4.18"
+      acme-policy: "v1"
+  remediationAction: enforce
+  severity: low
+policies:
+- name: acme-config-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "1"
+  manifests:
+    - path: source-crs/DisconnectedICSP.yaml
+      patches:
+      - spec:
+          repositoryDigestMirrors:
+          - mirrors:
+            - registry.acme.example.com:5000
+            source: registry.redhat.io
+    - path: source-crs/ConsoleOperatorDisable.yaml
+      patches:
+      - spec:
+          logLevel: Debug
