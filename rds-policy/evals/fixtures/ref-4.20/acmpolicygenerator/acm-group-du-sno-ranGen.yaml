@@ -1,0 +1,33 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: group-du-sno-ranGen
+policyDefaults:
+  namespace: ztp-group-du-sno
+  placement:
+    labelSelector:
+      group-du-sno: ""
+      du-profile: "latest"
+  remediationAction: inform
+policies:
+- name: group-du-sno-config-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "1"
+  manifests:
+    - path: source-crs/DisconnectedIDMS.yaml
+    - path: source-crs/ConsoleOperatorDisable.yaml
+      complianceType: mustnothave
+- name: group-du-sno-sub-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "2"
+  manifests:
+    - path: source-crs/SubscriptionOCP.yaml
+    - path: source-crs/StorageLV.yaml
+- name: group-du-sno-ran-config-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "10"
+  manifests:
+    - path: source-crs/TunedPerformancePatch.yaml
+    - path: source-crs/PtpConfigSlave.yaml
+    # - path: source-crs/PtpConfigBoundary.yaml
+    # - path: source-crs/SriovFecClusterConfig.yaml
