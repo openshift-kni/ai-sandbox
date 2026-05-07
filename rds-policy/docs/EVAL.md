@@ -181,6 +181,18 @@ evals/files/partner-pinned"`
 - DisconnectedICSP → IDMS migration still handled correctly
 - Output is well-formed PolicyGenerator YAML
 
+## Fixture → Assertion Mapping
+
+Shows which assertions run against which test fixtures, and what merge
+behaviors each assertion exercises. All CR-specific values are config-driven
+in `promptfooconfig.yaml` — Python assertions are a generic engine.
+
+| Test | Fixture | Deterministic | Semantic (llm-rubric) | Behaviors Tested |
+|------|---------|--------------|----------------------|-----------------|
+| EXPLAIN | ref only | `skill-used`, `llm-rubric` ×3 | explain-tuned, explain-gvk, workflow ordering | Reference diff accuracy, EXPLAIN-before-merge ordering |
+| COMPREHENSIVE MERGE | `partner-comprehensive/` (2 PGs) | `check_file_content` (9 config-driven checks), `check_completeness`, `check_multi_pg_structure`, `check_cr_replication`, `check_parent_kustomization`, `no_unsafe_apply`, `log_user_questions` | merge-communication, conflict-flagging, overlay-lifecycle, wave-change, mustnothave-warning, list-merge-awareness, redundant-overlay, coverage-scan | GVK migration, patch preservation, version bumping, list restructure, partner-only CR, PTP scheduling, priority conflict, channel conflict, CR removal, wave change, mustnothave, redundant overlay, coverage scan, checklist, multi-PG, CR replication, kustomization, safety, AskUserQuestion log |
+| REQUIRED-CR | `partner-required-cr/` (1 PG) | `skill-used` | required-cr-severity | Required vs optional missing CR severity |
+
 ## Coverage
 
 ### Triggering

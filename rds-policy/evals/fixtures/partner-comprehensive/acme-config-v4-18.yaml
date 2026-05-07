@@ -1,0 +1,50 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: acme-config-v4-18
+policyDefaults:
+  namespace: ztp-acme-v4-18
+  placement:
+    labelSelector:
+      cluster-version: "v4.18"
+      acme-policy: "v1"
+  remediationAction: enforce
+  severity: low
+policies:
+- name: acme-config-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "1"
+  manifests:
+    - path: source-crs/DisconnectedICSP.yaml
+      patches:
+      - spec:
+          repositoryDigestMirrors:
+          - mirrors:
+            - registry.acme.example.com:5000
+            source: registry.redhat.io
+    - path: source-crs/ConsoleOperatorDisable.yaml
+      patches:
+      - spec:
+          logLevel: Debug
+- name: acme-operator-sub-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "2"
+  manifests:
+    - path: source-crs/SubscriptionOCP.yaml
+      patches:
+      - spec:
+          channel: "stable-4.18"
+          installPlanApproval: Automatic
+    - path: source-crs/NMStateOperator.yaml
+      patches:
+      - metadata:
+          labels:
+            acme-managed: "true"
+    - path: source-crs/StorageLV.yaml
+      patches:
+      - spec:
+          storage:
+            deviceClasses:
+            - name: vg1
+              thinPoolConfig:
+                sizePercent: 80

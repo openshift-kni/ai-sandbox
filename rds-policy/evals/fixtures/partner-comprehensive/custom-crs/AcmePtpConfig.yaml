@@ -1,0 +1,13 @@
+apiVersion: ptp.openshift.io/v1
+kind: PtpConfig
+metadata:
+  name: acme-ptp-slave
+  namespace: openshift-ptp
+  annotations:
+    ran.openshift.io/ztp-deploy-wave: "10"
+spec:
+  profile:
+    - name: slave
+      ptp4lOpts: "-2 -s --summary_interval -4"
+      phc2sysOpts: "-a -r -n 24"
+      interface: ens7f0
