@@ -176,6 +176,12 @@ All outputs (reports, checklist, merged policies) go inside this directory.
 - Coverage scan and redundant overlay detection are in the Processing
   and Finish sections -- follow those procedures.
 
+- Partners may have edited source-crs directly or by mistake instead of
+  using PG patches. These edits are silently lost when source-crs are
+  replaced during upgrade. Before replacing, diff the partner's
+  source-crs against the reference source-crs for the source version
+  to detect drift. Any differences need to become PG patches.
+
 ## MERGE Workflow
 
 **MERGE NEVER modifies the user's original files.** All output goes to
@@ -199,17 +205,30 @@ whether the source is a git repo URL or a local directory path.
 3. **Create** a new version directory alongside the existing one
    (e.g. `version_4.20/` next to `version_4.18.5/`).
    - Copy the partner's current version directory as the starting point.
-4. **Replace source-crs/** for the target version. Either:
+4. **Source-crs drift detection** -- before replacing source-crs,
+   diff every source-cr file the partner references (via `path:` in
+   their PG manifests) against the corresponding reference source-cr
+   for the **source** version. Any field that differs is a direct
+   edit the partner made instead of using a PG patch. These edits
+   will be silently lost when source-crs are replaced with the target
+   version. For each diff found:
+   - Flag as `[!]` in the checklist
+   - Show the exact field, partner's value, and reference default
+   - Warn that the edit will be lost on source-crs replacement
+   - Suggest adding a PG patch to preserve the customization
+   Only diff source-crs the partner actually references in their PG
+   manifests — ignore unused files.
+5. **Replace source-crs/** for the target version. Either:
    - Extract `/home/ztp/` from the ZTP container image
      (`registry.redhat.io/openshift4/ztp-site-generate-rhel8:v{version}`).
      Auto-discover which container tool is available at runtime
      (`oc`, `podman`, `docker`, `skopeo`) and compose the appropriate
      extraction commands.
    - Or copy from local reference if available (e.g. `ref-{version}/source-crs/`).
-5. **Verify symlinks** -- check that every `path:` the partner uses in
+6. **Verify symlinks** -- check that every `path:` the partner uses in
    their PolicyGenerator YAML still resolves in the new source-crs/.
    If a path is missing, the merge must update it.
-6. **Identify custom source-CRs** -- compare each `path:` in the
+7. **Identify custom source-CRs** -- compare each `path:` in the
    partner's PolicyGenerator against the reference PG examples for the
    source version. If a partner path differs from the reference path for
    the same CR kind, the partner has a custom source-CR (e.g. a custom
