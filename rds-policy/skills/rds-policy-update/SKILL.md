@@ -3,12 +3,15 @@ name: rds-policy-update
 description: >
   Generates updated OpenShift RDS Day 2 configuration policies for version
   upgrades by merging new reference content with partner PolicyGenerator
-  customizations. Use when user mentions "update policies", "RDS upgrade",
-  "4.18 to 4.20", "what changed between versions", "diff references",
-  "merge reference changes", "validate policies", "generate policies for 4.x",
-  or provides two OCP version numbers in the context of RDS or Day 2 config.
-  Also triggers for standalone EXPLAIN or VALIDATE. Do NOT use for cluster
-  upgrades, fresh installs, or fleet rollout.
+  customizations. Supports both RAN and Core NF types — same workflow,
+  different CR catalogs. Use when user mentions "update policies",
+  "RDS upgrade", "4.18 to 4.20", "what changed between versions",
+  "diff references", "merge reference changes", "validate policies",
+  "generate policies for 4.x", "telco core", "core policies",
+  "core-baseline", "ranGen", or provides two OCP version numbers in the
+  context of RDS, Day 2 config, telco RAN, or telco Core. Also triggers
+  for standalone EXPLAIN or VALIDATE. Do NOT use for cluster upgrades,
+  fresh installs, or fleet rollout.
 license: Apache-2.0
 metadata:
   notice: >
@@ -26,16 +29,28 @@ versions. You work at the **PolicyGenerator** level -- that's input and output.
 **On first interaction**, before any other output, display this notice:
 `NOTICE: Content provided to this skill, including policy files and configuration data, may be sent to the LLM configured in your environment. Ensure the LLM meets your requirements for data privacy and security before use.`
 
+This skill supports two NF types — **RAN** and **Core**. The workflow
+(EXPLAIN → MERGE → VALIDATE) is the same. The reference container image,
+directory layout, and CR catalog differ — see `references/core-reference-guide.md`
+for Core-specific details.
+
 ## What's In This Skill
 
 **References** (`references/`) -- domain knowledge to consult as needed:
-- `policygenerator-semantics.md` -- read when working with PolicyGenerator
-  structure, complianceType, or wave ordering
-- `cr-matching-heuristics.md` -- read when matching partner CRs to reference
-  changes, especially SRIOV and PTP
-- `hub-template-handling.md` -- read when encountering `{{hub ... hub}}`
-- `merge-conflict-resolution.md` -- read when deciding how to handle overlaps
-- `validate-phases.md` -- read before running dry-run validation
+
+**Pick one based on NF type** (if unsure whether RAN or Core, ask the user):
+- `ran-reference-guide.md` -- RAN container image, layout, PG naming,
+  partner versioning. Also load `cr-matching-heuristics.md` and
+  `ran-cr-guidance/` for RAN-specific CR matching.
+- `core-reference-guide.md` -- Core container image, layout, PG naming,
+  partner versioning, Core-specific CR matching notes.
+
+**Common** (always relevant regardless of NF type):
+- `policygenerator-semantics.md` -- PolicyGenerator structure,
+  complianceType, wave ordering
+- `hub-template-handling.md` -- `{{hub ... hub}}` templates
+- `merge-conflict-resolution.md` -- how to handle overlaps
+- `validate-phases.md` -- dry-run validation
 
 ## Important
 
@@ -61,6 +76,9 @@ VALIDATE), always end with this notice on its own line:
 ## Inputs
 
 **Always required:**
+- **NF type** -- RAN or Core. Auto-detect from context: `acm-*-ranGen.yaml`,
+  `du-profile`, PTP/SRIOV-FEC → RAN. `core-baseline.yaml`, `core-overlay.yaml`,
+  MetalLB/ODF, `rds-core-*` branches → Core. If ambiguous, ask.
 - **Current version** -- e.g. 4.18
 - **Target version** -- e.g. 4.20
 
@@ -72,16 +90,12 @@ VALIDATE), always end with this notice on its own line:
 ## Capabilities
 
 - **EXPLAIN** -- diff two reference versions, classify changes per-CR.
-  Only needs the two versions -- no partner policies required.
-  Read `references/policygenerator-semantics.md` first -- it has the
-  extraction command for fetching reference CRs from the ZTP container.
+  Only needs the two versions and NF type -- no partner policies required.
+  Read the NF-specific reference guide and `policygenerator-semantics.md`.
 - **MERGE** -- combine reference updates with partner customizations.
-  Read `references/cr-matching-heuristics.md`,
-  `references/merge-conflict-resolution.md`,
-  `references/hub-template-handling.md`, and every file in
-  `references/cr-guidance/` before starting. The cr-guidance files
-  contain restructuring rules for specific CRs — read all of them
-  so you know which CRs need special handling during the merge.
+  Read the NF-specific reference guide, `merge-conflict-resolution.md`,
+  and `hub-template-handling.md`. For RAN, also read
+  `cr-matching-heuristics.md` and every file in `ran-cr-guidance/`.
 - **VALIDATE** -- dry-run merged policies against hub.
   Read `references/validate-phases.md` before starting.
 
@@ -92,11 +106,14 @@ to merge.
 ## EXPLAIN Workflow
 
 1. **Locate references** -- check for local `ref-{version}/` directories
-   first. If they exist and contain `source-crs/`, use them as-is -- do
-   NOT extract from containers. Only fall back to ZTP container extraction
-   if no local ref directories are found.
-2. **Diff PolicyGenerator examples** (`acm-*-ranGen.yaml`) between versions.
-   These are the high-level view of what changed.
+   first. If they exist and contain `source-crs/` (RAN) or `reference-crs/`
+   (Core), use them as-is -- do NOT extract from containers. Only fall
+   back to container extraction if no local ref directories are found.
+   For Core, read `references/core-reference-guide.md` for the container
+   image and layout.
+2. **Diff PolicyGenerator examples** between versions. RAN uses
+   `acm-*-ranGen.yaml`; Core uses `core-baseline.yaml`, `core-overlay.yaml`,
+   and `core-upgrade*.yaml`. These are the high-level view of what changed.
 3. **Diff source-crs content** -- compare EVERY source-cr file that
    differs between versions, not just the ones with obvious changes.
    Even a single added field matters -- it may conflict with a partner
@@ -105,7 +122,7 @@ to merge.
    reorganization, new subdirectories, symlinks.
 5. **Classify each change**: path-only, content change, GVK replacement,
    new CR, removed CR, deprecated CR.
-   - For CRs with guidance in `references/cr-guidance/`, read that
+   - For CRs with guidance in `ran-cr-guidance/`, read that
      guidance and use it to describe restructuring details — e.g.
      where partner sections map in a multi-profile Tuned, or which
      IBU lifecycle stages exist.
@@ -221,9 +238,9 @@ whether the source is a git repo URL or a local directory path.
    - If a local directory path: `cp -a` the directory into the output
      directory. Do NOT modify the original.
    - Ask the user for permission before cloning/copying.
-3. **Create** a new version directory alongside the existing one
-   (e.g. `version_4.20/` next to `version_4.18.5/`).
-   - Copy the partner's current version directory as the starting point.
+3. **Prepare the target version workspace** -- follow the partner's
+   existing convention (version directories or version branches). Copy
+   the partner's current version content as the starting point.
 4. **Source-crs drift detection** -- before replacing source-crs,
    diff every source-cr file the partner references (via `path:` in
    their PG manifests) against the corresponding reference source-cr
@@ -237,13 +254,11 @@ whether the source is a git repo URL or a local directory path.
    - Suggest adding a PG patch to preserve the customization
    Only diff source-crs the partner actually references in their PG
    manifests — ignore unused files.
-5. **Replace source-crs/** for the target version. Either:
-   - Extract `/home/ztp/` from the ZTP container image
-     (`registry.redhat.io/openshift4/ztp-site-generate-rhel8:v{version}`).
-     Auto-discover which container tool is available at runtime
-     (`oc`, `podman`, `docker`, `skopeo`) and compose the appropriate
-     extraction commands.
-   - Or copy from local reference if available (e.g. `ref-{version}/source-crs/`).
+5. **Replace source-crs/** (RAN) or **reference-crs/** (Core) for the
+   target version. The container image differs by NF type — see the
+   NF-specific reference guide. Auto-discover which container tool is
+   available (`oc`, `podman`, `docker`, `skopeo`). Or copy from local
+   reference if available (e.g. `ref-{version}/`).
 6. **Verify symlinks** -- check that every `path:` the partner uses in
    their PolicyGenerator YAML still resolves in the new source-crs/.
    If a path is missing, the merge must update it.
@@ -351,7 +366,7 @@ each item fully before starting the next one. Processing steps:
    redundant. This is a per-manifest sweep, not per-checklist-item --
    it catches overlays unrelated to the current change. For
    TunedPerformancePatch, use
-   `references/cr-guidance/tuned-performance-patch.md`.
+   `references/ran-cr-guidance/tuned-performance-patch.md`.
 7. **Flag for user review** if:
    - Partner has customized the same field the reference changed (true conflict)
    - Partner has pinned a value the checklist says to bump (e.g. older

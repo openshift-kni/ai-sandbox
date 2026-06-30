@@ -1,23 +1,9 @@
 # PolicyGenerator Semantics
 
-## Reference Source
-
-Reference CRs and PolicyGenerator examples are extracted from the ZTP site
-generator container: `registry.redhat.io/openshift4/ztp-site-generate-rhel8:{version}`
-(e.g. `:4.18`, `:4.20`).
-
-The content at `/home/ztp/` inside the image needs to be extracted to a
-local directory. Auto-discover which container tool is available at
-runtime (`oc`, `podman`, `docker`, `skopeo`) and compose the appropriate
-extraction commands.
-
-Container layout at `/home/ztp/`:
-- `source-crs/` -- individual CR YAML files (base templates). Directory
-  structure may change between versions (flat vs operator subdirectories).
-  Check for backward-compatible symlinks.
-- `argocd/example/acmpolicygenerator/` -- PolicyGenerator YAML examples
-  for different profiles (common, group-du-sno, site, etc.)
-- `reference/` -- telco-reference content organized by operator
+Common PolicyGenerator concepts shared across RAN and Core NF types.
+For NF-specific details (container image, directory layout, PG naming,
+partner versioning), see `ran-reference-guide.md` or
+`core-reference-guide.md`.
 
 ## PolicyGenerator vs Policy CR
 
