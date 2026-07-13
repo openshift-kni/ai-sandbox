@@ -318,7 +318,9 @@ each item fully before starting the next one. Processing steps:
    on the same manifest against the target source-cr. If a patch field
    sets the same value the source-cr already has, mark as `[~]`
    redundant. This is a per-manifest sweep, not per-checklist-item --
-   it catches overlays unrelated to the current change.
+   it catches overlays unrelated to the current change. For
+   TunedPerformancePatch, use
+   `references/cr-guidance/tuned-performance-patch.md`.
 7. **Flag for user review** if:
    - Partner has customized the same field the reference changed (true conflict)
    - Partner has pinned a value the checklist says to bump (e.g. older
