@@ -33,9 +33,8 @@ source-cr sub-profile value, check the partner's `include=` line:
   the value → the value IS redundant (`[~]`), partner can remove it.
 - If the partner overrides `include=` and skips that sub-profile →
   the value is NOT redundant. The partner's direct specification is
-  the only way those settings get applied. Flag as `[~] NOTE: not
-  redundant — partner include chain skips {sub-profile} where
-  reference has this value`.
+  the only way those settings get applied. Preserve it and note that
+  the include chain skips `{sub-profile}`.
 
 When the partner's `include=` line differs from the reference, note
 this as a structural divergence in the checklist so the user is aware.

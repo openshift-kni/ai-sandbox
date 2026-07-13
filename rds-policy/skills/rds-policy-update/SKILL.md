@@ -318,12 +318,9 @@ each item fully before starting the next one. Processing steps:
    on the same manifest against the target source-cr. If a patch field
    sets the same value the source-cr already has, mark as `[~]`
    redundant. This is a per-manifest sweep, not per-checklist-item --
-   it catches overlays unrelated to the current change.
-   **Tuned special case:** for TunedPerformancePatch, compare the
-   partner's profile `include=` line against the reference's. If
-   the partner skips sub-profiles from the chain, values in those
-   skipped sub-profiles are NOT redundant — the partner needs them
-   directly. See `references/cr-guidance/tuned-performance-patch.md`.
+   it catches overlays unrelated to the current change. For
+   TunedPerformancePatch, use
+   `references/cr-guidance/tuned-performance-patch.md`.
 7. **Flag for user review** if:
    - Partner has customized the same field the reference changed (true conflict)
    - Partner has pinned a value the checklist says to bump (e.g. older
@@ -375,10 +372,6 @@ re-read to confirm the fix.
    **Critical:** a partner field is only redundant if its value is
    character-for-character identical to the source-cr default. If the
    values differ at all, it is a partner customization -- preserve it.
-   **Tuned exception:** see `references/cr-guidance/tuned-performance-patch.md`
-   for include-chain-aware redundancy rules. A Tuned patch value
-   matching a sub-profile default is only redundant if the partner's
-   profile inherits that sub-profile.
 4. **New reference field sweep** -- for every manifest the partner uses,
    compare the partner's patch fields against the target version's
    source-cr. If the source-cr added a new field the partner doesn't
