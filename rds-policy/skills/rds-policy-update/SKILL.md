@@ -204,8 +204,6 @@ whether the source is a git repo URL or a local directory path.
 2. **Clone or copy** the partner's policy source into the output
    directory (`/tmp/rds-merge-{target}-{timestamp}/partner/`).
    - If a git repo URL: clone into the output directory.
-     For internal GitLab with self-signed certs, use
-     `GIT_SSL_NO_VERIFY=1` on the clone.
    - If a local directory path: `cp -a` the directory into the output
      directory. Do NOT modify the original.
    - Ask the user for permission before cloning/copying.

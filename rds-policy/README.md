@@ -26,7 +26,13 @@ For local development, run from `rds-policy/` or use `--plugin-dir`:
 claude --plugin-dir /path/to/ai-sandbox/rds-policy
 ```
 
-### Prerequisites (optional, for validation hook)
+### Prerequisites
+
+- **TLS certificates** — all root and self-signed certificates required
+  to reach internal Git hosts must be present in the execution
+  environment's trust store before running the skill.
+
+#### Optional (for validation hook)
 
 - `kustomize` (v4.5+)
 - [PolicyGenerator plugin](https://github.com/open-cluster-management-io/policy-generator-plugin)
