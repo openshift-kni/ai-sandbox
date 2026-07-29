@@ -1,0 +1,10 @@
+# Content-only skill image for Kubernetes image volume mounts.
+# See README.md (Skill image) and `make build`.
+
+FROM scratch
+
+COPY skills/rds-policy-update/ /skills/rds-policy-update/
+
+LABEL name="rds-policy-skill" \
+      summary="RDS Policy Update skill image for OpenShift Lightspeed" \
+      description="Content-only OCI image carrying the rds-policy-update skill at /skills/rds-policy-update for K8s image volume mounts"

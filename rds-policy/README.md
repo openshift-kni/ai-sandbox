@@ -41,6 +41,26 @@ claude --plugin-dir /path/to/ai-sandbox/rds-policy
 Without these, the skill works normally but the validation hook is a
 no-op.
 
+## Skill image
+
+Content-only OCI image for Kubernetes image volume mounts. The operator
+mounts it read-only into the sandbox pod at `/app/skills/rds-policy-update/`
+via the AgenticRun `tools.skills[]` spec:
+
+```yaml
+tools:
+  skills:
+  - image: <registry>/rds-policy-skill:latest
+    paths: ["/skills/rds-policy-update"]
+```
+
+Build from this directory:
+
+```sh
+make build
+# or: podman build -f Containerfile -t rds-policy-skill:latest .
+```
+
 ## Docs
 
 - [DESIGN.md](docs/DESIGN.md) — architecture and design
