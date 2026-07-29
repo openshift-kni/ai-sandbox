@@ -1,15 +1,5 @@
 # Content-only skill image for Kubernetes image volume mounts.
-#
-# The operator mounts this image as a read-only volume into the sandbox pod
-# at /app/skills/rds-policy-update/ via the AgenticRun tools.skills[] spec:
-#
-#   tools:
-#     skills:
-#     - image: <registry>/rds-policy-skill:latest
-#       paths: ["/skills/rds-policy-update"]
-#
-# Build:
-#   podman build -f Containerfile -t rds-policy-skill:latest .
+# See README.md (Skill image) and `make build`.
 
 FROM scratch
 
