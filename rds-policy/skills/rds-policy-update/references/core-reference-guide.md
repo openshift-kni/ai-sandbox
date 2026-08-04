@@ -1,9 +1,9 @@
 # Core Reference Guide
 
-This file covers how Core differs from RAN. The workflow (EXPLAIN →
-MERGE → VALIDATE), PolicyGenerator format, matching heuristics, and
-merge rules are the same — only the container image, directory layout,
-PG naming, and CR catalog differ.
+This file covers how Core differs from RAN. The EXPLAIN → MERGE →
+VALIDATE workflow and PolicyGenerator format are shared, but Core has
+its own container image, directory layout, PG naming, CR catalog, and
+CR matching details (see CR Matching Notes below).
 
 ## Container Image
 
@@ -11,13 +11,17 @@ PG naming, and CR catalog differ.
 registry.redhat.io/openshift4/openshift-telco-core-rds-rhel9:{version}
 ```
 
-Extract with:
+Extract `/home/telco-core/` from the image with whichever container
+tool is available (`oc`, `podman`, `docker`, `skopeo`). With podman:
 ```bash
 podman pull registry.redhat.io/openshift4/openshift-telco-core-rds-rhel9:{version}
 id=$(podman create registry.redhat.io/openshift4/openshift-telco-core-rds-rhel9:{version})
 podman cp $id:/home/telco-core/ {output_dir}
 podman rm $id
 ```
+With oc: `oc image extract <image> --path /home/telco-core/:{output_dir}`.
+Docker mirrors the podman commands; skopeo requires unpacking the
+image layers after `skopeo copy`.
 
 Compare with RAN which uses `ztp-site-generate-rhel8` and extracts
 from `/home/ztp/`.

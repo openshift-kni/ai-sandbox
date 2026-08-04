@@ -78,7 +78,10 @@ VALIDATE), always end with this notice on its own line:
 **Always required:**
 - **NF type** -- RAN or Core. Auto-detect from context: `acm-*-ranGen.yaml`,
   `du-profile`, PTP/SRIOV-FEC → RAN. `core-baseline.yaml`, `core-overlay.yaml`,
-  MetalLB/ODF, `rds-core-*` branches → Core. If ambiguous, ask.
+  `core-upgrade*.yaml`, MetalLB/ODF, `rds-core-*` branches → Core. If
+  ambiguous, ask. The NF type also selects the CR directory: `source-crs/`
+  for RAN, `reference-crs/` for Core -- wherever this file says
+  "source-crs", use the NF-appropriate directory.
 - **Current version** -- e.g. 4.18
 - **Target version** -- e.g. 4.20
 
@@ -106,15 +109,18 @@ to merge.
 ## EXPLAIN Workflow
 
 1. **Locate references** -- check for local `ref-{version}/` directories
-   first. If they exist and contain `source-crs/` (RAN) or `reference-crs/`
-   (Core), use them as-is -- do NOT extract from containers. Only fall
-   back to container extraction if no local ref directories are found.
+   first. Check each requested version separately: if its directory
+   exists and contains `source-crs/` (RAN) or `reference-crs/` (Core),
+   use it as-is -- do NOT extract from containers. Fall back to
+   container extraction for any version whose local directory is
+   missing or lacks the expected CR directory.
    For Core, read `references/core-reference-guide.md` for the container
    image and layout.
 2. **Diff PolicyGenerator examples** between versions. RAN uses
    `acm-*-ranGen.yaml`; Core uses `core-baseline.yaml`, `core-overlay.yaml`,
    and `core-upgrade*.yaml`. These are the high-level view of what changed.
-3. **Diff source-crs content** -- compare EVERY source-cr file that
+3. **Diff CR content** (`source-crs/` for RAN, `reference-crs/` for
+   Core) -- compare EVERY CR file that
    differs between versions, not just the ones with obvious changes.
    Even a single added field matters -- it may conflict with a partner
    patch or represent a new default the partner should know about.
@@ -241,9 +247,10 @@ whether the source is a git repo URL or a local directory path.
 3. **Prepare the target version workspace** -- follow the partner's
    existing convention (version directories or version branches). Copy
    the partner's current version content as the starting point.
-4. **Source-crs drift detection** -- before replacing source-crs,
-   diff every source-cr file the partner references (via `path:` in
-   their PG manifests) against the corresponding reference source-cr
+4. **CR drift detection** -- before replacing the CR directory
+   (`source-crs/` for RAN, `reference-crs/` for Core),
+   diff every CR file the partner references (via `path:` in
+   their PG manifests) against the corresponding reference CR
    for the **source** version. Any field that differs is a direct
    edit the partner made instead of using a PG patch. These edits
    will be silently lost when source-crs are replaced with the target
@@ -260,7 +267,8 @@ whether the source is a git repo URL or a local directory path.
    available (`oc`, `podman`, `docker`, `skopeo`). Or copy from local
    reference if available (e.g. `ref-{version}/`).
 6. **Verify symlinks** -- check that every `path:` the partner uses in
-   their PolicyGenerator YAML still resolves in the new source-crs/.
+   their PolicyGenerator YAML still resolves in the new CR directory
+   (`source-crs/` for RAN, `reference-crs/` for Core).
    If a path is missing, the merge must update it.
 7. **Identify custom source-CRs** -- compare each `path:` in the
    partner's PolicyGenerator against the reference PG examples for the
@@ -314,7 +322,8 @@ each item fully before starting the next one. Processing steps:
 
 1. **Find ALL affected partner CRs** -- scan EVERY partner PolicyGenerator
    file for manifests that reference the same CR path or GVK. Use matching
-   heuristics from `references/cr-matching-heuristics.md`. A single
+   heuristics from `references/cr-matching-heuristics.md` (RAN) or the
+   CR Matching Notes in `references/core-reference-guide.md` (Core). A single
    reference CR change may affect multiple manifest entries across
    different policies. Apply the change to every instance. If patches
    differ between instances, handle each one separately.

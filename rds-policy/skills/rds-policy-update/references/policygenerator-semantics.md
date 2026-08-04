@@ -15,13 +15,17 @@ partner versioning), see `ran-reference-guide.md` or
 
 ## PolicyGenerator YAML Structure
 
+The example below uses generic names; `path:` entries point into the
+NF-specific CR directory (`source-crs/` for RAN, `reference-crs/` for
+Core).
+
 ```yaml
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
 metadata:
-  name: acm-common-ranGen
+  name: common-policies
 policyDefaults:
-  namespace: ztp-common
+  namespace: policies-common
   placement:
     labelSelector:
       matchExpressions:
@@ -32,13 +36,13 @@ policyDefaults:
 policies:
   - name: common-config-policy
     manifests:
-      - path: source-crs/SriovSubscription.yaml
+      - path: source-crs/OperatorSubscription.yaml
         patches:
           - metadata:
-              name: sriov-network-operator-subscription
+              name: operator-subscription
             spec:
               channel: "4.18"
-      - path: source-crs/PtpSubscription.yaml
+      - path: source-crs/OperatorConfig.yaml
 ```
 
 Key elements:
