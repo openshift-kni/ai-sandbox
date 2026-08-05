@@ -3,8 +3,8 @@ name: rds-policy-update
 description: >
   Generates updated OpenShift RDS Day 2 configuration policies for version
   upgrades by merging new reference content with partner PolicyGenerator
-  customizations. Supports both RAN and Core NF types — same workflow,
-  different CR catalogs. Use when user mentions "update policies",
+  customizations. Supports multiple NF use cases — same workflow,
+  different CR reference containers. Use when user mentions "update policies",
   "RDS upgrade", "4.18 to 4.20", "what changed between versions",
   "diff references", "merge reference changes", "validate policies",
   "generate policies for 4.x", "telco core", "core policies",
@@ -29,10 +29,9 @@ versions. You work at the **PolicyGenerator** level -- that's input and output.
 **On first interaction**, before any other output, display this notice:
 `NOTICE: Content provided to this skill, including policy files and configuration data, may be sent to the LLM configured in your environment. Ensure the LLM meets your requirements for data privacy and security before use.`
 
-This skill supports two NF types — **RAN** and **Core**. The workflow
-(EXPLAIN → MERGE → VALIDATE) is the same. The reference container image,
-directory layout, and CR catalog differ — see `references/core-reference-guide.md`
-for Core-specific details.
+The workflow (EXPLAIN → MERGE → VALIDATE) is the same for every NF
+use case. Use-case specifics (container image, directory layout, CR
+catalog) live in the reference guides indexed below.
 
 ## What's In This Skill
 
@@ -79,9 +78,9 @@ VALIDATE), always end with this notice on its own line:
 - **NF type** -- RAN or Core. Auto-detect from context: `acm-*-ranGen.yaml`,
   `du-profile`, PTP/SRIOV-FEC → RAN. `core-baseline.yaml`, `core-overlay.yaml`,
   `core-upgrade*.yaml`, MetalLB/ODF, `rds-core-*` branches → Core. If
-  ambiguous, ask. The NF type also selects the CR directory: `source-crs/`
-  for RAN, `reference-crs/` for Core -- wherever this file says
-  "source-crs", use the NF-appropriate directory.
+  ambiguous, ask. This skill operates on **source CRs**; their location
+  is use-case-specific and given in the NF-specific reference guide.
+  Wherever this file says "source-crs", use that directory.
 - **Current version** -- e.g. 4.18
 - **Target version** -- e.g. 4.20
 
@@ -110,18 +109,17 @@ to merge.
 
 1. **Locate references** -- check for local `ref-{version}/` directories
    first. Check each requested version separately: if its directory
-   exists and contains `source-crs/` (RAN) or `reference-crs/` (Core),
-   use it as-is -- do NOT extract from containers. Fall back to
-   container extraction for any version whose local directory is
-   missing or lacks the expected CR directory.
-   For Core, read `references/core-reference-guide.md` for the container
+   exists and contains the source-CR directory, use it as-is -- do NOT
+   extract from containers. Fall back to container extraction for any
+   version whose local directory is missing or lacks the source-CR
+   directory. The NF-specific reference guide gives the container
    image and layout.
 2. **Diff PolicyGenerator examples** between versions. RAN uses
    `acm-*-ranGen.yaml`; Core uses `core-baseline.yaml`, `core-overlay.yaml`,
    and `core-upgrade*.yaml`. These are the high-level view of what changed.
-3. **Diff CR content** (`source-crs/` for RAN, `reference-crs/` for
-   Core) -- compare EVERY CR file that
-   differs between versions, not just the ones with obvious changes.
+3. **Diff CR content** (the source-CR directory) -- compare EVERY CR
+   file that differs between versions, not just the ones with obvious
+   changes.
    Even a single added field matters -- it may conflict with a partner
    patch or represent a new default the partner should know about.
 4. **Detect structural changes** -- new/removed files, directory
@@ -246,9 +244,11 @@ whether the source is a git repo URL or a local directory path.
    - Ask the user for permission before cloning/copying.
 3. **Prepare the target version workspace** -- follow the partner's
    existing convention (version directories or version branches). Copy
-   the partner's current version content as the starting point.
-4. **CR drift detection** -- before replacing the CR directory
-   (`source-crs/` for RAN, `reference-crs/` for Core),
+   the partner's current version content as the starting point. Also
+   follow the partner's PolicyGenerator file naming convention -- if
+   they use e.g. `core-baseline-production.yaml`, keep that pattern
+   rather than renaming to the reference names.
+4. **CR drift detection** -- before replacing the source-CR directory,
    diff every CR file the partner references (via `path:` in
    their PG manifests) against the corresponding reference CR
    for the **source** version. Any field that differs is a direct
@@ -261,15 +261,14 @@ whether the source is a git repo URL or a local directory path.
    - Suggest adding a PG patch to preserve the customization
    Only diff source-crs the partner actually references in their PG
    manifests — ignore unused files.
-5. **Replace source-crs/** (RAN) or **reference-crs/** (Core) for the
-   target version. The container image differs by NF type — see the
-   NF-specific reference guide. Auto-discover which container tool is
+5. **Replace the source-CR directory** for the target version. The
+   container image differs by use case — see the NF-specific reference
+   guide. Auto-discover which container tool is
    available (`oc`, `podman`, `docker`, `skopeo`). Or copy from local
    reference if available (e.g. `ref-{version}/`).
 6. **Verify symlinks** -- check that every `path:` the partner uses in
-   their PolicyGenerator YAML still resolves in the new CR directory
-   (`source-crs/` for RAN, `reference-crs/` for Core).
-   If a path is missing, the merge must update it.
+   their PolicyGenerator YAML still resolves in the new source-CR
+   directory. If a path is missing, the merge must update it.
 7. **Identify custom source-CRs** -- compare each `path:` in the
    partner's PolicyGenerator against the reference PG examples for the
    source version. If a partner path differs from the reference path for

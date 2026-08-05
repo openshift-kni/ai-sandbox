@@ -1,9 +1,9 @@
 # PolicyGenerator Semantics
 
-Common PolicyGenerator concepts shared across RAN and Core NF types.
-For NF-specific details (container image, directory layout, PG naming,
-partner versioning), see `ran-reference-guide.md` or
-`core-reference-guide.md`.
+Common PolicyGenerator concepts shared across all use cases.
+For use-case-specific details (container image, directory layout,
+PG naming, partner versioning), see the use-case reference guide
+(`ran-reference-guide.md` or `core-reference-guide.md`).
 
 ## PolicyGenerator vs Policy CR
 
@@ -16,8 +16,8 @@ partner versioning), see `ran-reference-guide.md` or
 ## PolicyGenerator YAML Structure
 
 The example below uses generic names; `path:` entries point into the
-NF-specific CR directory (`source-crs/` for RAN, `reference-crs/` for
-Core).
+use-case-specific source-CR directory (see the use-case reference
+guide for its location).
 
 ```yaml
 apiVersion: policy.open-cluster-management.io/v1

@@ -1,9 +1,9 @@
 # Core Reference Guide
 
-This file covers how Core differs from RAN. The EXPLAIN → MERGE →
-VALIDATE workflow and PolicyGenerator format are shared, but Core has
-its own container image, directory layout, PG naming, CR catalog, and
-CR matching details (see CR Matching Notes below).
+This file provides additional content for the Core use case: container
+image, directory layout, PG naming, CR catalog, and CR matching details
+(see CR Matching Notes below). The EXPLAIN → MERGE → VALIDATE workflow
+and PolicyGenerator format are common to all use cases.
 
 ## Container Image
 
@@ -23,9 +23,6 @@ With oc: `oc image extract <image> --path /home/telco-core/:{output_dir}`.
 Docker mirrors the podman commands; skopeo requires unpacking the
 image layers after `skopeo copy`.
 
-Compare with RAN which uses `ztp-site-generate-rhel8` and extracts
-from `/home/ztp/`.
-
 ## Directory Layout
 
 ```
@@ -42,10 +39,10 @@ telco-core/configuration/
     └── optional/               # Partner chooses which to include
 ```
 
-Key differences from RAN:
-- CRs live in `reference-crs/` (not `source-crs/`)
-- Split into `required/` and `optional/` subdirectories (not flat)
-- PG files use baseline/overlay pattern (not `acm-*-ranGen.yaml`)
+Notes:
+- Source CRs are found in the `reference-crs/` directory, split into
+  `required/` and `optional/` subdirectories
+- PG files follow the baseline/overlay pattern shown above
 
 ## Core-Specific Operators
 
