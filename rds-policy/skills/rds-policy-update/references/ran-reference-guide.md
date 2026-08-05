@@ -35,17 +35,18 @@ RAN uses `acm-*-ranGen.yaml` organized by scope:
 
 Hierarchy: common → group (by topology) → site.
 
-## RAN-Specific Operators
+## Discovering the CR Catalog
 
-Present in RAN, absent from Core:
-- PTP (20+ config variants)
-- SRIOV-FEC (hardware baseband accelerators)
-- IBU / Lifecycle Agent (image-based upgrade for SNO)
-- OADP (backup/restore for IBU)
-- LSO / LVM (local storage)
-- Real-time kernel, workload partitioning, aggressive cluster tuning
+Do not rely on a hardcoded operator or CR list — it changes between
+versions. Derive the catalog from the extracted reference for each
+version being compared:
 
-## CR Matching Notes
+- Enumerate `source-crs/` for the shipped CRs.
+- Required vs optional status comes from the reference PG examples:
+  uncommented in all examples means required; commented out or
+  example-specific means optional.
+- Derive the operator set from the Subscription CRs (`spec.name`
+  gives the operator).
 
-See `cr-matching-heuristics.md` and `ran-cr-guidance/` for RAN-specific
-matching rules (SRIOV, PTP, Tuned restructure, IBU lifecycle).
+CR matching rules are common across use cases — see
+`cr-matching-heuristics.md`.

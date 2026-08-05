@@ -1,5 +1,7 @@
 # CR Matching Heuristics
 
+Common per-CR-type matching rules for all use cases.
+
 Match by **GVK + resource identity** (metadata.name, metadata.namespace).
 Never match by policy name, file name, or file structure.
 
@@ -42,6 +44,8 @@ may need to be replicated across all matches. Present all candidates to the user
 - Primary: `spec.cpu.isolated`, `spec.cpu.reserved`
 - Secondary: `spec.hugepages`, `spec.realTimeKernel`
 - Usually 1-to-1 but partner may have per-hardware-type variants.
+- When multiple PerformanceProfiles exist (e.g. one per
+  MachineConfigPool), match by `spec.nodeSelector`, not name.
 
 ### Subscription
 - Primary: `spec.name` (operator name)
@@ -54,10 +58,21 @@ may need to be replicated across all matches. Present all candidates to the user
   content structure and recommend priority, not name.
 - Profile hierarchy may change (single profile split into multiple
   arch-specific profiles). Compare the data sections.
+- When per-MachineConfigPool Tuned CRs exist, match by
+  `spec.recommend[].machineConfigPoolSelector`, not name.
 
 ### MachineConfig
 - Primary: `metadata.name` prefix pattern, `spec.config.storage.files[].path`
 - Match by what files/units the MachineConfig manages.
+
+### BGPPeer (MetalLB)
+- Primary: `spec.peerASN`, `spec.peerAddress`
+- 1-to-N matching is common (one reference peer, many partner peers).
+
+### Secret
+- Some Secrets are always partner-specific and must never be
+  auto-updated (e.g. `rook-ceph-external-cluster-details` for external
+  Ceph/ODF). Flag for user review only.
 
 ## GVK Replacements
 

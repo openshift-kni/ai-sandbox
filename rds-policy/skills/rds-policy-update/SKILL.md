@@ -39,12 +39,14 @@ catalog) live in the reference guides indexed below.
 
 **Pick one based on NF type** (if unsure whether RAN or Core, ask the user):
 - `ran-reference-guide.md` -- RAN container image, layout, PG naming,
-  partner versioning. Also load `cr-matching-heuristics.md` and
-  `ran-cr-guidance/` for RAN-specific CR matching.
+  partner versioning
 - `core-reference-guide.md` -- Core container image, layout, PG naming,
-  partner versioning, Core-specific CR matching notes.
+  partner versioning
 
 **Common** (always relevant regardless of NF type):
+- `cr-matching-heuristics.md` -- per-CR-type matching rules
+- `cr-guidance/` -- deeper per-CR-type merge guidance; read a CR
+  type's file when that CR appears on the checklist
 - `policygenerator-semantics.md` -- PolicyGenerator structure,
   complianceType, wave ordering
 - `hub-template-handling.md` -- `{{hub ... hub}}` templates
@@ -95,9 +97,10 @@ VALIDATE), always end with this notice on its own line:
   Only needs the two versions and NF type -- no partner policies required.
   Read the NF-specific reference guide and `policygenerator-semantics.md`.
 - **MERGE** -- combine reference updates with partner customizations.
-  Read the NF-specific reference guide, `merge-conflict-resolution.md`,
-  and `hub-template-handling.md`. For RAN, also read
-  `cr-matching-heuristics.md` and every file in `ran-cr-guidance/`.
+  Read the NF-specific reference guide, `cr-matching-heuristics.md`,
+  `merge-conflict-resolution.md`, and `hub-template-handling.md`. For
+  each CR type with a file in `cr-guidance/`, read it when processing
+  that CR.
 - **VALIDATE** -- dry-run merged policies against hub.
   Read `references/validate-phases.md` before starting.
 
@@ -126,7 +129,7 @@ to merge.
    reorganization, new subdirectories, symlinks.
 5. **Classify each change**: path-only, content change, GVK replacement,
    new CR, removed CR, deprecated CR.
-   - For CRs with guidance in `ran-cr-guidance/`, read that
+   - For CRs with guidance in `cr-guidance/`, read that
      guidance and use it to describe restructuring details — e.g.
      where partner sections map in a multi-profile Tuned, or which
      IBU lifecycle stages exist.
@@ -321,8 +324,7 @@ each item fully before starting the next one. Processing steps:
 
 1. **Find ALL affected partner CRs** -- scan EVERY partner PolicyGenerator
    file for manifests that reference the same CR path or GVK. Use matching
-   heuristics from `references/cr-matching-heuristics.md` (RAN) or the
-   CR Matching Notes in `references/core-reference-guide.md` (Core). A single
+   heuristics from `references/cr-matching-heuristics.md`. A single
    reference CR change may affect multiple manifest entries across
    different policies. Apply the change to every instance. If patches
    differ between instances, handle each one separately.
@@ -374,7 +376,7 @@ each item fully before starting the next one. Processing steps:
    redundant. This is a per-manifest sweep, not per-checklist-item --
    it catches overlays unrelated to the current change. For
    TunedPerformancePatch, use
-   `references/ran-cr-guidance/tuned-performance-patch.md`.
+   `references/cr-guidance/tuned-performance-patch.md`.
 7. **Flag for user review** if:
    - Partner has customized the same field the reference changed (true conflict)
    - Partner has pinned a value the checklist says to bump (e.g. older

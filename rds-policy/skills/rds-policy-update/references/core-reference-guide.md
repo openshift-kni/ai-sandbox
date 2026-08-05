@@ -1,9 +1,9 @@
 # Core Reference Guide
 
 This file provides additional content for the Core use case: container
-image, directory layout, PG naming, CR catalog, and CR matching details
-(see CR Matching Notes below). The EXPLAIN → MERGE → VALIDATE workflow
-and PolicyGenerator format are common to all use cases.
+image, directory layout, PG naming, and CR catalog discovery. The
+EXPLAIN → MERGE → VALIDATE workflow and PolicyGenerator format are
+common to all use cases.
 
 ## Container Image
 
@@ -44,26 +44,16 @@ Notes:
   `required/` and `optional/` subdirectories
 - PG files follow the baseline/overlay pattern shown above
 
-## Core-Specific Operators
+## Discovering the CR Catalog
 
-Present in Core, absent from RAN:
-- MetalLB (BGP, BFD, address pools)
-- ODF external (Ceph storage)
-- NROP (NUMA Resources Operator + secondary scheduler)
-- Multi-MCP (custom MachineConfigPools: worker-1, worker-2, etc.)
-- Cert-manager (optional)
-- MultiNetworkPolicy
+Do not rely on a hardcoded operator or CR list — it changes between
+versions. Derive the catalog from the extracted reference for each
+version being compared:
 
-Absent from Core, present in RAN:
-- PTP, SRIOV-FEC, IBU/LCA, OADP, LSO/LVM
-- Real-time kernel, workload partitioning, aggressive cluster tuning
+- Enumerate `reference-crs/required/` and `reference-crs/optional/`
+  for the shipped CRs and their required/optional status.
+- Derive the operator set from the Subscription CRs (`spec.name`
+  gives the operator).
 
-## CR Matching Notes
-
-Same GVK+identity matching as RAN. Core-specific considerations:
-- **PerformanceProfile**: Core may have multiple (one per MCP). Match
-  by `spec.nodeSelector`, not name. Uses `realTimeKernel: false`.
-- **Tuned**: per-MCP. Match by `machineConfigPoolSelector`, not name.
-- **MetalLB CRs**: BGPPeer is 1-to-N (match by `peerASN` + `peerAddress`).
-- **ODF Secret** (`rook-ceph-external-cluster-details`): always
-  partner-specific, never auto-update.
+CR matching rules are common across use cases — see
+`cr-matching-heuristics.md`.
