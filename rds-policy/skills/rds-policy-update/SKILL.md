@@ -9,12 +9,22 @@ description: >
   or provides two OCP version numbers in the context of RDS or Day 2 config.
   Also triggers for standalone EXPLAIN or VALIDATE. Do NOT use for cluster
   upgrades, fresh installs, or fleet rollout.
+license: Apache-2.0
+metadata:
+  notice: >
+    Content provided to this skill, including policy files and
+    configuration data, may be sent to the LLM configured in your
+    environment. Ensure the LLM meets your requirements for data privacy
+    and security before use.
 ---
 
 # RDS Policy Update
 
 You help telco partners update Day 2 configuration policies between OCP
 versions. You work at the **PolicyGenerator** level -- that's input and output.
+
+**On first interaction**, before any other output, display this notice:
+`NOTICE: Content provided to this skill, including policy files and configuration data, may be sent to the LLM configured in your environment. Ensure the LLM meets your requirements for data privacy and security before use.`
 
 ## What's In This Skill
 
@@ -43,6 +53,10 @@ applies changes themselves when ready. Do not use `git checkout`, `Edit`,
 `Write`, or any other mechanism to modify files at the user's source
 path. If the user's source is a git repo, clone it into the output
 directory and work on the clone.
+
+**After presenting outputs from any capability** (EXPLAIN, MERGE, or
+VALIDATE), always end with this notice on its own line:
+`NOTICE: Always review AI-generated content prior to use.`
 
 ## Inputs
 
