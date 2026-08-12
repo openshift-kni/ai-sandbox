@@ -264,24 +264,27 @@ whether the source is a git repo URL or a local directory path.
    - Suggest adding a PG patch to preserve the customization
    Only diff source-crs the partner actually references in their PG
    manifests — ignore unused files.
-5. **Replace the source-CR directory** for the target version. The
+5. **Identify and stage custom source-CRs** -- before replacing the
+   directory, compare each `path:` in the partner's PolicyGenerator
+   against the reference PG examples for the source version. If a partner
+   path differs from the reference path for the same CR kind, the partner
+   has a custom source-CR (e.g. a custom `sriovOperatorConfigForSNO.yaml`
+   instead of the reference `SriovOperatorConfig.yaml`). Stage these files
+   aside so the next step's replacement can't delete them.
+6. **Replace the source-CR directory** for the target version. The
    container image differs by use case — see the NF-specific reference
    guide. Auto-discover which container tool is
    available (`oc`, `podman`, `docker`, `skopeo`). Or copy from local
    reference if available (e.g. `ref-{version}/`).
-6. **Verify symlinks** -- check that every `path:` the partner uses in
-   their PolicyGenerator YAML still resolves in the new source-CR
-   directory. If a path is missing, the merge must update it.
-7. **Identify custom source-CRs** -- compare each `path:` in the
-   partner's PolicyGenerator against the reference PG examples for the
-   source version. If a partner path differs from the reference path for
-   the same CR kind, the partner has a custom source-CR (e.g. a custom
-   `sriovOperatorConfigForSNO.yaml` instead of the reference
-   `SriovOperatorConfig.yaml`). These custom files must be:
+7. **Restore staged custom source-CRs** -- copy the files staged in
+   step 5 back to their exact partner paths in the new version's output
+   directory. These custom files must be:
    - Preserved unchanged during merge (do not replace with reference paths)
-   - Copied to the new version's output directory
    - Flagged for user review (the custom CR may need updates for the
      target version's API changes)
+8. **Verify symlinks** -- check that every `path:` the partner uses in
+   their PolicyGenerator YAML still resolves in the new source-CR
+   directory. If a path is missing, the merge must update it.
 
 ### Processing (checklist-driven)
 

@@ -7,7 +7,9 @@ Never match by policy name, file name, or file structure.
 
 ## Confidence Levels
 
-**Exact:** Same GVK + same name. Merge automatically.
+**Exact:** Same GVK + same name. Merge automatically -- unless a per-GVK
+rule below overrides name-based matching or restricts auto-update (see
+"Per-GVK Matching Fields").
 
 **Fuzzy:** Same GVK, different name, similar spec structure. Always requires
 user confirmation.
@@ -26,6 +28,11 @@ SriovNetworkNodePolicy variants for different node types). A reference change
 may need to be replicated across all matches. Present all candidates to the user.
 
 ## Per-GVK Matching Fields
+
+These per-GVK rules take precedence over the generic "same GVK + same
+name" exact match above. Apply the resource's field-based matching, and
+honor any never-auto-update restriction (e.g. Secret), before merging --
+even when the names are identical.
 
 ### SriovNetworkNodePolicy
 - Primary: `spec.deviceType`, `spec.resourceName`
