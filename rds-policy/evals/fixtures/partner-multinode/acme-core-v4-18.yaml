@@ -1,0 +1,26 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: acme-core-v4-18
+policyDefaults:
+  namespace: ztp-acme-core-v4-18
+  placement:
+    labelSelector:
+      cluster-version: "v4.18"
+  remediationAction: enforce
+  severity: low
+policies:
+- name: acme-mcp-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "1"
+  manifests:
+    # Partner's cluster topology: a SINGLE worker pool with their own name.
+    - path: custom-crs/mcp-worker-cnf.yaml
+- name: acme-sub-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "2"
+  manifests:
+    - path: source-crs/SubscriptionOCP.yaml
+      patches:
+      - spec:
+          channel: "stable-4.18"

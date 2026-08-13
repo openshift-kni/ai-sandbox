@@ -177,6 +177,11 @@ All outputs (reports, checklist, merged policies) go inside this directory.
 - Wave ordering: 1-2 (install) -> 10 (configure) -> 100 (site).
   Don't move CRs across boundaries.
 
+- Cluster topology is the partner's. Pool structure, names, counts, and
+  node selectors (for example, MachineConfigPools) come from the
+  partner's policies, not the reference's example topology. A topology
+  difference is not a conflict to ask about -- keep the partner's.
+
 - Policy CRD accepts unknown fields inside `objectDefinition` --
   dry-run only catches Policy wrapper errors, not embedded CR errors.
 
@@ -266,6 +271,15 @@ PolicyGenerator files, different policy groupings, different names.
 Always follow the partner's structure. If the reference moved a CR
 to a different wave or policy, note it and ask for confirmation
 rather than silently reorganizing.
+
+**The partner owns the cluster topology.** Resources that describe the
+shape of the target cluster -- how nodes are grouped into pools, the
+pool names and counts, and the node selectors that bind CRs to them
+(for example, MachineConfigPools) -- come from the partner's policies,
+never from the reference. The reference ships only an *example*
+topology; when the partner's differs, keep the partner's. Unlike a
+wave/policy move, this is deterministic -- do NOT ask which to use.
+Bind any per-pool CRs to the partner's pool names, not the reference's.
 
 **Write complete PolicyGenerator files.** Each merged PG file must
 contain ALL manifests from the partner's original -- not just the ones
