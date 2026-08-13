@@ -1,0 +1,14 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: rds-mr-webhook
+  namespace: openshift-lightspeed
+spec:
+  to:
+    kind: Service
+    name: rds-mr-webhook
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

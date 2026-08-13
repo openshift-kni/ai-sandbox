@@ -1,0 +1,112 @@
+apiVersion: agentic.openshift.io/v1alpha1
+kind: AgenticRun
+metadata:
+  name: rds-policy-explain
+  namespace: openshift-lightspeed
+  labels:
+    agentic.openshift.io/source: rds-policy
+spec:
+  request: |
+    EXPLAIN the RDS Day 2 configuration policy changes between
+    OpenShift 4.18 and 4.20, then deliver the report as a GitLab MR.
+
+    CRITICAL: You have limited tool calls. Prioritize WRITING OUTPUT
+    over reading. Do batch diffs, not one-file-at-a-time exploration.
+    Write explain.md and checklist.md EARLY, then do the MR. You MUST
+    complete the MR delivery before returning your structured response.
+
+    STEP 1 — Clone references (run these exact commands):
+      export GIT_SSL_NO_VERIFY=true
+      cd /tmp
+      git clone -b release-4.18 --depth=1 https://github.com/openshift-kni/cnf-features-deploy.git cnf-4.18
+      git clone -b release-4.20 --depth=1 https://github.com/openshift-kni/telco-reference.git ref-4.20
+    The 4.18 source-crs are at: cnf-4.18/ztp/source-crs/
+    The 4.18 PG examples are at: cnf-4.18/ztp/gitops-subscriptions/argocd/example/acmpolicygenerator/
+    The 4.20 source-crs are at: ref-4.20/telco-ran/configuration/source-crs/
+    The 4.20 PG examples are at: ref-4.20/telco-ran/configuration/argocd/example/acmpolicygenerator/
+
+    STEP 2 — Batch diff (single command, do NOT read files one by one):
+      diff -rq /tmp/cnf-4.18/ztp/source-crs/ /tmp/ref-4.20/telco-ran/configuration/source-crs/ > /tmp/source-crs-diff.txt 2>&1
+      diff -u /tmp/cnf-4.18/ztp/gitops-subscriptions/argocd/example/acmpolicygenerator/acm-common-ranGen.yaml /tmp/ref-4.20/telco-ran/configuration/argocd/example/acmpolicygenerator/acm-common-ranGen.yaml > /tmp/pg-common-diff.txt 2>&1
+      diff -u /tmp/cnf-4.18/ztp/gitops-subscriptions/argocd/example/acmpolicygenerator/acm-group-du-sno-ranGen.yaml /tmp/ref-4.20/telco-ran/configuration/argocd/example/acmpolicygenerator/acm-group-du-sno-ranGen.yaml > /tmp/pg-group-diff.txt 2>&1
+    Read the diff output files, then read cr-guidance references for
+    TunedPerformancePatch and IBU only if those CRs appear in the diff.
+
+    STEP 3 — Write explain.md and checklist.md to the output directory.
+    Create output dir: /tmp/rds-merge-4.20-$(date +%Y%m%d-%H%M%S)/
+
+    STEP 4 — Deliver as GitLab MR (follow MR Delivery in skill):
+      Repository: https://gitlab.cee.redhat.com/apalanis/ztp-reference
+      Target branch: main
+      Use GITLAB_TOKEN env var. Use GIT_SSL_NO_VERIFY=true.
+
+    STEP 5 — Return structured response with the analysis summary and
+    MR URL in options[0].components. Do not invent remediation commands
+    or RBAC — this is analysis-only.
+  targetNamespaces:
+    - openshift-lightspeed
+  tools:
+    skills:
+      - image: quay.io/rh_ee_apalanis/rds-policy-agent:latest
+        paths:
+          - /skills/rds-policy-update
+    requiredSecrets:
+      - name: gitlab-token
+        description: "GitLab PAT for gitlab.cee.redhat.com (api + write_repository scope)"
+        mountAs:
+          type: EnvVar
+          envVar:
+            name: GITLAB_TOKEN
+  analysis:
+    agent: smart-s5
+  analysisOutput:
+    mode: Minimal
+    schema:
+      type: object
+      required:
+        - summary
+        - changedCRs
+        - impact
+        - checklist
+      properties:
+        summary:
+          type: string
+        changedCRs:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - change
+            properties:
+              name:
+                type: string
+              change:
+                type: string
+              impact:
+                type: string
+        impact:
+          type: string
+        checklist:
+          type: array
+          items:
+            type: string
+        mergeRequest:
+          type: object
+          description: "GitLab Merge Request created with the EXPLAIN report. Omit if MR creation was not attempted or failed."
+          properties:
+            url:
+              type: string
+              description: "Full URL of the created merge request"
+            branch:
+              type: string
+              description: "Source branch name pushed to the repository"
+            repository:
+              type: string
+              description: "GitLab project path (e.g. group/project)"
+            iid:
+              type: integer
+              description: "GitLab merge request IID (project-scoped ID)"
+            error:
+              type: string
+              description: "Error message if MR creation failed"
