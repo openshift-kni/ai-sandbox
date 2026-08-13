@@ -659,7 +659,7 @@ tests:
           checks:
             - name: partner_pool_preserved
               type: exists
-              cr: "mcp-worker-cnf"
+              cr: "custom-crs/mcp-worker-cnf"
 
       # Deterministic: reference example pools must not be added to partner PGs
       - type: python
@@ -689,7 +689,7 @@ tests:
         metric: topology-preservation
         transform: file://assertions/common.py:enrich_output
 
-      # Informational: log any AskUserQuestion calls (review in UI)
+      # Deterministic: agent must NOT ask which topology to use
       - type: python
-        value: file://assertions/workflow.py:log_user_questions
-        metric: user-questions-log
+        value: file://assertions/workflow.py:no_topology_question
+        metric: no-topology-question
