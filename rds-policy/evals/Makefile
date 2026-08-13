@@ -1,4 +1,4 @@
-.PHONY: setup preflight eval eval-repeat eval-view lint clean \
+.PHONY: setup preflight eval eval-filter eval-repeat eval-view lint clean \
 	eval-openshell eval-openshell-recorded package-openshell-results \
 	openshell-view help
 
@@ -32,6 +32,9 @@ preflight: ## Verify Vertex prerequisites before an eval run
 
 eval: preflight ## Run all evals (single pass)
 	npx promptfoo eval --no-cache
+
+eval-filter: preflight ## Run evals whose description matches PATTERN (e.g. make eval-filter PATTERN=T4)
+	npx promptfoo eval --no-cache --filter-pattern "$(PATTERN)"
 
 eval-repeat: preflight ## Run all evals 3x to measure variance
 	npx promptfoo eval --no-cache --repeat 3
