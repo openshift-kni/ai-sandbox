@@ -246,8 +246,12 @@ def check_absent_patterns(_output, context):
             docs = list(yaml.safe_load_all(content))
         except yaml.YAMLError:
             continue
-        if any(isinstance(d, dict) and d.get("kind") == "PolicyGenerator" for d in docs):
-            pg_text.append(content)
+        # Serialize only the PolicyGenerator docs — not sibling docs or
+        # comments in the same file, which could mention a reference name
+        # without it being an actual topology leak.
+        for d in docs:
+            if isinstance(d, dict) and d.get("kind") == "PolicyGenerator":
+                pg_text.append(yaml.safe_dump(d))
     blob = "\n".join(pg_text)
     present = [p for p in forbidden if p in blob]
     if present:
