@@ -105,8 +105,7 @@ the MR before returning your structured response. Prioritize:
 1. **Locate references** -- check for local `ref-{version}/` directories
    first. If they exist and contain `source-crs/`, use them as-is -- do
    NOT extract from containers. If no local refs, clone from GitHub
-   using the locations above. Use `--depth=1` for speed. Use
-   `GIT_SSL_NO_VERIFY=true` if TLS fails.
+   using the locations above. Use `--depth=1` for speed.
 2. **Diff PolicyGenerator examples** (`acm-*-ranGen.yaml`) between versions.
    These are the high-level view of what changed. Use `diff -u` in a
    single batch command.
@@ -197,9 +196,6 @@ entirely -- the local files in the output directory are the deliverable.
    git clone https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOST}/${PROJECT_PATH}.git repo
    cd repo
    ```
-   If TLS fails, retry with `git -c http.sslVerify=false clone ...`
-   and warn about the TLS issue.
-
 3. **Create a branch**:
    ```
    git checkout -b rds-explain/{source}-to-{target}
