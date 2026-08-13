@@ -1,0 +1,13 @@
+apiVersion: agentic.openshift.io/v1alpha1
+kind: Agent
+metadata:
+  name: smart-s5
+spec:
+  llmProvider:
+    name: vertex-ai
+  model: claude-sonnet-5
+  maxTurns: 500
+  timeouts:
+    analysisSeconds: 3600
+    executionSeconds: 600
+    verificationSeconds: 300

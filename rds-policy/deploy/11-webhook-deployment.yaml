@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rds-mr-webhook
+  namespace: openshift-lightspeed
+  labels:
+    app: rds-mr-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rds-mr-webhook
+  template:
+    metadata:
+      labels:
+        app: rds-mr-webhook
+    spec:
+      serviceAccountName: rds-mr-webhook
+      containers:
+        - name: webhook
+          image: quay.io/rh_ee_apalanis/rds-mr-webhook:latest
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: GITLAB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rds-mr-webhook-secret
+                  key: token
+            - name: NAMESPACE
+              value: openshift-lightspeed
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

@@ -1,0 +1,21 @@
+FROM registry.redhat.io/ubi9/python-312-minimal:latest
+
+USER 0
+WORKDIR /app
+
+COPY webhook/requirements.txt .
+RUN microdnf install -y --nodocs python3.12-pip && \
+    pip3.12 install --no-cache-dir -r requirements.txt && \
+    microdnf clean all
+
+COPY webhook/handler.py .
+
+RUN chown -R 1001:0 /app
+USER 1001:1001
+
+EXPOSE 8080
+CMD ["python3.12", "-m", "uvicorn", "handler:app", "--host", "0.0.0.0", "--port", "8080"]
+
+LABEL name="rds-mr-webhook" \
+      summary="GitLab MR webhook handler for RDS policy AgenticRun feedback" \
+      description="Receives GitLab Note events and patches AgenticRun revisionFeedback"

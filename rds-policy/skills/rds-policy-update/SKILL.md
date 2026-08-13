@@ -91,14 +91,40 @@ to merge.
 
 ## EXPLAIN Workflow
 
+**Budget discipline:** You have a limited number of tool calls. Use
+batch commands (`diff -rq`, `find`, `grep -r`) instead of reading files
+one at a time. Write output files (explain.md, checklist.md) as soon as
+you have enough data -- do not exhaustively read every file first. If
+the user's request includes MR delivery instructions, you MUST complete
+the MR before returning your structured response. Prioritize:
+  1. Clone/locate references (1-2 tool calls)
+  2. Batch diff (1-3 tool calls)
+  3. Read only the CRs that actually changed (targeted reads)
+  4. Write explain.md + checklist.md
+  5. MR delivery (if requested)
+  6. Return structured response
+
+**Reference locations by version:**
+- **4.18 and earlier**: source-crs and PG examples live in the
+  `cnf-features-deploy` repo, NOT in `telco-reference`. Clone
+  `https://github.com/openshift-kni/cnf-features-deploy.git` with
+  branch `release-{version}`. Source-crs at `ztp/source-crs/`, PG
+  examples at `ztp/gitops-subscriptions/argocd/example/acmpolicygenerator/`.
+- **4.19 and later**: content migrated to the `telco-reference` repo.
+  Clone `https://github.com/openshift-kni/telco-reference.git` with
+  branch `release-{version}`. Source-crs at
+  `telco-ran/configuration/source-crs/`, PG examples at
+  `telco-ran/configuration/argocd/example/acmpolicygenerator/`.
+
 1. **Locate references** -- check for local `ref-{version}/` directories
    first. If they exist and contain `source-crs/`, use them as-is -- do
-   NOT extract from containers. Only fall back to ZTP container extraction
-   if no local ref directories are found.
+   NOT extract from containers. If no local refs, clone from GitHub
+   using the locations above. Use `--depth=1` for speed.
 2. **Diff PolicyGenerator examples** (`acm-*-ranGen.yaml`) between versions.
-   These are the high-level view of what changed.
-3. **Diff source-crs content** -- compare EVERY source-cr file that
-   differs between versions, not just the ones with obvious changes.
+   These are the high-level view of what changed. Use `diff -u` in a
+   single batch command.
+3. **Diff source-crs content** -- use `diff -rq` to get the full list
+   of changed files in one command, then read only the files that differ.
    Even a single added field matters -- it may conflict with a partner
    patch or represent a new default the partner should know about.
 4. **Detect structural changes** -- new/removed files, directory
@@ -153,6 +179,150 @@ All outputs (reports, checklist, merged policies) go inside this directory.
    For fields where the partner may have intentionally pinned a different
    version (e.g. a CatalogSource pinned to an older version), mark with
    `⚠ REVIEW` — do not auto-update, flag for user decision.
+
+## MR Delivery
+
+When `GITLAB_TOKEN` is set in the environment and the user's request
+includes a GitLab repository URL, deliver the EXPLAIN results as a
+GitLab Merge Request. If `GITLAB_TOKEN` is not set, skip this section
+entirely -- the local files in the output directory are the deliverable.
+
+### Prerequisites
+
+- `GITLAB_TOKEN` environment variable (GitLab PAT with `api` +
+  `write_repository` scope)
+- Target repository URL in the user's request (e.g.
+  `https://gitlab.cee.redhat.com/group/project`)
+- `git` and `curl` available in the execution environment
+
+### Workflow
+
+1. **Extract repo info** from the user's request. Parse the GitLab
+   host and project path. For example, from
+   `https://gitlab.cee.redhat.com/telco/partner-policies` extract:
+   - `GITLAB_HOST=gitlab.cee.redhat.com`
+   - `PROJECT_PATH=telco/partner-policies`
+   - `PROJECT_ID_ENCODED=telco%2Fpartner-policies` (URL-encoded for API)
+
+2. **Clone the repository** into the output directory:
+   ```
+   cd /tmp/rds-merge-{target}-{timestamp}/
+   git clone https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOST}/${PROJECT_PATH}.git repo
+   cd repo
+   ```
+3. **Create a branch**:
+   ```
+   git checkout -b rds-explain/{source}-to-{target}
+   ```
+   If the branch already exists on the remote, append a short
+   timestamp suffix: `rds-explain/{source}-to-{target}-{HHMMSS}`.
+
+4. **Copy reports into the repo**:
+   ```
+   mkdir -p rds-reports
+   cp ../explain.md rds-reports/
+   cp ../checklist.md rds-reports/
+   ```
+
+5. **Commit and push**:
+   ```
+   git add rds-reports/
+   git -c user.email="rds-policy-agent@redhat.com" \
+       -c user.name="RDS Policy Agent" \
+       commit -m "RDS EXPLAIN: {source} to {target} reference changes"
+   git push origin rds-explain/{source}-to-{target}
+   ```
+   Never use `--force`. If push fails, report the error and fall back
+   to local-only output.
+
+6. **Create the Merge Request** via GitLab REST API v4:
+   ```
+   curl -s -X POST \
+       "https://${GITLAB_HOST}/api/v4/projects/${PROJECT_ID_ENCODED}/merge_requests" \
+       -H "PRIVATE-TOKEN: ${GITLAB_TOKEN}" \
+       -H "Content-Type: application/json" \
+       -d '{
+         "source_branch": "rds-explain/{source}-to-{target}",
+         "target_branch": "main",
+         "title": "RDS EXPLAIN: {source} to {target} reference changes",
+         "description": "<contents of explain.md>"
+       }'
+   ```
+   Parse the JSON response for `web_url` (the MR URL) and `iid`
+   (project-scoped MR number).
+
+   If the API returns an error, report it in the structured response
+   and fall back to local output. Common errors:
+   - 401: token lacks required scope
+   - 404: project path is wrong or token has no access
+   - 409: MR already exists for this source/target branch pair
+
+7. **Return MR metadata** in the structured response under the
+   `mergeRequest` field:
+   ```json
+   {
+     "url": "https://gitlab.cee.redhat.com/group/project/-/merge_requests/42",
+     "branch": "rds-explain/4.18-to-4.20",
+     "repository": "group/project",
+     "iid": 42
+   }
+   ```
+
+### Safety Rules
+
+- **Never force-push.** If push is rejected, report the error.
+- **Never modify existing branches.** Only push the new branch you created.
+- **Never delete branches** on the remote.
+- **If any step fails**, fall back to local-only output. Set the
+  `mergeRequest` field to indicate the failure:
+  ```json
+  {
+    "url": "",
+    "branch": "rds-explain/4.18-to-4.20",
+    "repository": "group/project",
+    "error": "push rejected: branch already exists on remote"
+  }
+  ```
+- **Do not include the GITLAB_TOKEN** in any output, log, commit
+  message, or MR description.
+
+### Revision Handling
+
+When the request includes revision feedback (a `## User Feedback` or
+`## MR Review Comment` section appended by the operator), this is a
+**revision** of a previous EXPLAIN run. Handle it differently:
+
+1. **Detect revision context** -- look for `## User Feedback` or
+   `## MR Review Comment` in the request text. If present, this is
+   a revision, not a fresh run.
+
+2. **Check for existing MR branch** -- before creating a new branch,
+   check if `rds-explain/{source}-to-{target}` already exists on the
+   remote:
+   ```
+   git ls-remote origin refs/heads/rds-explain/{source}-to-{target}
+   ```
+   If it exists, this is a revision. Create a new branch with a
+   generation suffix: `rds-explain/{source}-to-{target}-gen{N}`
+   where N is derived from the revision count or timestamp.
+
+3. **Incorporate feedback** -- re-run the analysis focusing on the
+   reviewer's specific questions or concerns. Update explain.md and
+   checklist.md to address the feedback directly. Add new sections
+   or expand existing ones as needed.
+
+4. **Push updated reports** -- commit the revised files to the new
+   branch and push. If the token has `api` scope, create a new MR
+   referencing the original. If not, include the manual MR creation
+   URL in the structured response.
+
+5. **Detect proceed-with-merge signals** -- if the feedback contains
+   approval language (e.g. "proceed with merge", "approved", "LGTM",
+   "go ahead with merge"), transition to the MERGE workflow:
+   - Clone the partner's policies from the same repo
+   - Run MERGE using the EXPLAIN results as input
+   - Push merged PolicyGenerator YAML to the MR branch
+   - The MR now contains both the report and the merged policies
 
 ## Gotchas
 
