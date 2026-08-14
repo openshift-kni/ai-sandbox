@@ -3,7 +3,7 @@ name: rds-policy-update
 description: >
   Generates updated OpenShift RDS Day 2 configuration policies for version
   upgrades by merging new reference content with partner PolicyGenerator
-  customizations. Supports multiple NF use cases — same workflow,
+  customizations. Supports multiple use cases — same workflow,
   different CR reference containers. Use when user mentions "update policies",
   "RDS upgrade", "4.18 to 4.20", "what changed between versions",
   "diff references", "merge reference changes", "validate policies",
@@ -29,21 +29,21 @@ versions. You work at the **PolicyGenerator** level -- that's input and output.
 **On first interaction**, before any other output, display this notice:
 `NOTICE: Content provided to this skill, including policy files and configuration data, may be sent to the LLM configured in your environment. Ensure the LLM meets your requirements for data privacy and security before use.`
 
-The workflow (EXPLAIN → MERGE → VALIDATE) is the same for every NF
-use case. Use-case specifics (container image, directory layout, CR
+The workflow (EXPLAIN → MERGE → VALIDATE) is the same for every use
+case. Use-case specifics (container image, directory layout, CR
 catalog) live in the reference guides indexed below.
 
 ## What's In This Skill
 
 **References** (`references/`) -- domain knowledge to consult as needed:
 
-**Pick one based on NF type** (if unsure whether RAN or Core, ask the user):
+**Pick the reference guide that matches the use case** (if unsure, ask the user):
 - `ran-reference-guide.md` -- RAN container image, layout, PG naming,
   partner versioning
 - `core-reference-guide.md` -- Core container image, layout, PG naming,
   partner versioning
 
-**Common** (always relevant regardless of NF type):
+**Common** (always relevant, regardless of use case):
 - `cr-matching-heuristics.md` -- per-CR-type matching rules
 - `cr-guidance/` -- deeper per-CR-type merge guidance; read a CR
   type's file when that CR appears on the checklist
@@ -77,12 +77,13 @@ VALIDATE), always end with this notice on its own line:
 ## Inputs
 
 **Always required:**
-- **NF type** -- RAN or Core. Auto-detect from context: `acm-*-ranGen.yaml`,
-  `du-profile`, PTP/SRIOV-FEC → RAN. `core-baseline.yaml`, `core-overlay.yaml`,
-  `core-upgrade*.yaml`, MetalLB/ODF, `rds-core-*` branches → Core. If
-  ambiguous, ask. This skill operates on **source CRs**; their location
-  is use-case-specific and given in the NF-specific reference guide.
-  Wherever this file says "source-crs", use that directory.
+- **Use case** -- which reference applies. Auto-detect from context:
+  `acm-*-ranGen.yaml`, `du-profile`, PTP/SRIOV-FEC → RAN;
+  `core-baseline.yaml`, `core-overlay.yaml`, `core-upgrade*.yaml`,
+  MetalLB/ODF, `rds-core-*` branches → Core. If ambiguous, ask. This
+  skill operates on **source CRs**; their location is use-case-specific
+  and given in the matching reference guide. Wherever this file says
+  "source-crs", use that directory.
 - **Current version** -- e.g. 4.18
 - **Target version** -- e.g. 4.20
 
@@ -94,10 +95,10 @@ VALIDATE), always end with this notice on its own line:
 ## Capabilities
 
 - **EXPLAIN** -- diff two reference versions, classify changes per-CR.
-  Only needs the two versions and NF type -- no partner policies required.
-  Read the NF-specific reference guide and `policygenerator-semantics.md`.
+  Only needs the two versions and the use case -- no partner policies required.
+  Read the matching reference guide and `policygenerator-semantics.md`.
 - **MERGE** -- combine reference updates with partner customizations.
-  Read the NF-specific reference guide, `cr-matching-heuristics.md`,
+  Read the matching reference guide, `cr-matching-heuristics.md`,
   `merge-conflict-resolution.md`, and `hub-template-handling.md`. For
   each CR type with a file in `cr-guidance/`, read it when processing
   that CR.
@@ -115,11 +116,11 @@ to merge.
    exists and contains the source-CR directory, use it as-is -- do NOT
    extract from containers. Fall back to container extraction for any
    version whose local directory is missing or lacks the source-CR
-   directory. The NF-specific reference guide gives the container
+   directory. The matching reference guide gives the container
    image and layout.
-2. **Diff PolicyGenerator examples** between versions. RAN uses
-   `acm-*-ranGen.yaml`; Core uses `core-baseline.yaml`, `core-overlay.yaml`,
-   and `core-upgrade*.yaml`. These are the high-level view of what changed.
+2. **Diff PolicyGenerator files** between versions -- the matching
+   reference guide names the files for the use case. These are the
+   high-level view of what changed.
 3. **Diff CR content** (the source-CR directory) -- compare EVERY CR
    file that differs between versions, not just the ones with obvious
    changes.
@@ -272,7 +273,7 @@ whether the source is a git repo URL or a local directory path.
    instead of the reference `SriovOperatorConfig.yaml`). Stage these files
    aside so the next step's replacement can't delete them.
 6. **Replace the source-CR directory** for the target version. The
-   container image differs by use case — see the NF-specific reference
+   container image differs by use case — see the matching reference
    guide. Auto-discover which container tool is
    available (`oc`, `podman`, `docker`, `skopeo`). Or copy from local
    reference if available (e.g. `ref-{version}/`).
