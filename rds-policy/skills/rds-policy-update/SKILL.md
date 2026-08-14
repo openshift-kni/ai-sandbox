@@ -501,9 +501,12 @@ won't process the new version's policies.
 
 1. **Coverage scan** (mandatory) -- compare the reference PG examples
    against the partner's CR set:
-   a. Identify which reference CRs are **required** (uncommented in
-      all reference PG examples) vs **optional** (commented out or
-      only in some examples).
+   a. Identify which reference CRs are **required** vs **optional**
+      using the catalog rules in the matching reference guide's
+      "Discovering the CR Catalog" section (RAN derives this from the
+      reference PG examples -- uncommented in all examples means
+      required; Core derives it from the `required/` vs `optional/`
+      reference-CR directories).
    b. For each required CR the partner does not include, output exactly:
       `WARNING: required CR {name} is not included in your policies.`
       You MUST use the words "WARNING" and "required" so the severity

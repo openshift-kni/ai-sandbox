@@ -77,9 +77,10 @@ even when the names are identical.
 - 1-to-N matching is common (one reference peer, many partner peers).
 
 ### Secret
-- Some Secrets are always partner-specific and must never be
-  auto-updated (e.g. `rook-ceph-external-cluster-details` for external
-  Ceph/ODF). Flag for user review only.
+- Never auto-update any Secret, even on an exact GVK + name match.
+  Secrets carry partner- or environment-specific data (e.g.
+  `rook-ceph-external-cluster-details` for external Ceph/ODF, pull
+  secrets, MetalLB/BGP credentials). Flag for user review only.
 
 ## GVK Replacements
 

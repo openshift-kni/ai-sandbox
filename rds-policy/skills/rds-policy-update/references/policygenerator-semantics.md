@@ -36,13 +36,13 @@ policyDefaults:
 policies:
   - name: common-config-policy
     manifests:
-      - path: source-crs/OperatorSubscription.yaml
+      - path: <source-cr-dir>/OperatorSubscription.yaml
         patches:
           - metadata:
               name: operator-subscription
             spec:
               channel: "4.18"
-      - path: source-crs/OperatorConfig.yaml
+      - path: <source-cr-dir>/OperatorConfig.yaml
 ```
 
 Key elements:

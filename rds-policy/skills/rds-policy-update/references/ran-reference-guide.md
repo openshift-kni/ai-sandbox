@@ -3,7 +3,7 @@
 ## Container Image
 
 ```
-registry.redhat.io/openshift4/ztp-site-generate-rhel8:{version}
+registry.redhat.io/openshift4/ztp-site-generate-rhel8:v{version}
 ```
 
 Extract `/home/ztp/` from the container. Auto-discover which container

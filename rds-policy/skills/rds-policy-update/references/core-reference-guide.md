@@ -8,30 +8,26 @@ common to all use cases.
 ## Container Image
 
 ```
-registry.redhat.io/openshift4/openshift-telco-core-rds-rhel9:{version}
+registry.redhat.io/openshift4/openshift-telco-core-rds-rhel9:v{version}
 ```
 
-Extract `/home/telco-core/` from the image with whichever container
-tool is available (`oc`, `podman`, `docker`, `skopeo`). With podman:
+The image emits its contents as a base64-encoded tar on stdout. Log in
+to the registry first, then run the image and unpack the stream:
 ```bash
-podman pull registry.redhat.io/openshift4/openshift-telco-core-rds-rhel9:{version}
-id=$(podman create registry.redhat.io/openshift4/openshift-telco-core-rds-rhel9:{version})
-podman cp $id:/home/telco-core/ {output_dir}
-podman rm $id
+podman login registry.redhat.io
+podman run --rm registry.redhat.io/openshift4/openshift-telco-core-rds-rhel9:v{version} | base64 -d | tar xv -C {output_dir}
 ```
-With oc: `oc image extract <image> --path /home/telco-core/:{output_dir}`.
-Docker mirrors the podman commands; skopeo requires unpacking the
-image layers after `skopeo copy`.
+This unpacks a `telco-core-rds/` tree into `{output_dir}` (see Directory
+Layout below). Do NOT use `podman cp` or `oc image extract` -- this
+image streams its content rather than laying it out on the image
+filesystem.
 
 ## Directory Layout
 
 ```
-telco-core/configuration/
-├── core-baseline.yaml          # PG: required content (fixed)
-├── core-overlay.yaml           # PG: customizable + optional
-├── core-upgrade.yaml           # PG: upgrade orchestration
-├── core-upgrade-finish.yaml    # PG: release workers post-upgrade
-├── core-upgrade-precache.yaml  # PG: pre-cache images
+telco-core-rds/configuration/
+├── <PG example files>          # e.g. core-baseline.yaml, core-overlay.yaml,
+│                               #   core-upgrade.yaml (names vary by version)
 ├── kustomization.yaml
 ├── template-values/            # ConfigMaps for hub-side templating
 └── reference-crs/              # Deployable CRs
@@ -42,7 +38,9 @@ telco-core/configuration/
 Notes:
 - Source CRs are found in the `reference-crs/` directory, split into
   `required/` and `optional/` subdirectories
-- PG files follow the baseline/overlay pattern shown above
+- The exact PolicyGenerator example filenames change between versions --
+  do not hardcode them. Enumerate the `*.yaml` PG files present in
+  `configuration/` for the version you extracted
 
 ## Discovering the CR Catalog
 
