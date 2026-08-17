@@ -79,8 +79,8 @@ VALIDATE), always end with this notice on its own line:
 **Always required:**
 - **Use case** -- which reference applies. Auto-detect from context:
   `acm-*-ranGen.yaml`, `du-profile`, PTP/SRIOV-FEC → RAN;
-  `core-baseline.yaml`, `core-overlay.yaml`, `core-upgrade*.yaml`,
-  MetalLB/ODF, `rds-core-*` branches → Core. If ambiguous, ask. This
+  `core-baseline.yaml`, `core-overlay.yaml`, `core-finish.yaml`,
+  `core-upgrade*.yaml`, MetalLB/ODF, `rds-core-*` branches → Core. If ambiguous, ask. This
   skill operates on **source CRs**; their location is use-case-specific
   and given in the matching reference guide. Wherever this file says
   "source-crs", use that directory.
