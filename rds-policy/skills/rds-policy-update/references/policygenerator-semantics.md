@@ -67,15 +67,12 @@ clusters. A separate policy with `complianceType: mustnothave` is needed.
 
 ## Wave Ordering
 
-Policies apply in wave order via the
-`policy.open-cluster-management.io/triggerBinding` annotation:
-
-- **Wave 1** -- subscriptions and operator installs
-- **Wave 2** -- operator configs depending on wave 1
-- **Wave 10** -- group-level configs (profile-specific)
-- **Wave 100** -- site-specific configs
-
-Preserve wave assignments from the reference unless user explicitly changes them.
+Policies apply in wave order via the `ran.openshift.io/ztp-deploy-wave`
+annotation (lower waves apply first). The specific values and their
+meaning differ by use case -- e.g. RAN uses 1 (subscriptions) /
+2 (configs) / 10 (group) / 100 (site), while Core uses its own values
+(e.g. 1, 5, 6, 200). Do not impose a fixed ladder; preserve the wave
+values from the reference unless the user explicitly changes them.
 
 ## Patches as Kustomize-like Overlays
 

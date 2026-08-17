@@ -198,8 +198,10 @@ All outputs (reports, checklist, merged policies) go inside this directory.
   compatible symlinks at the root level -- if they exist, old manifest
   path references still resolve and do NOT need updating.
 
-- Wave ordering: 1-2 (install) -> 10 (configure) -> 100 (site).
-  Don't move CRs across boundaries.
+- Wave ordering comes from the `ran.openshift.io/ztp-deploy-wave`
+  annotation and differs by use case (RAN 1/2/10/100; Core uses its own
+  values, e.g. 1/5/6/200). Preserve the reference's waves; don't move
+  CRs across them.
 
 - Policy CRD accepts unknown fields inside `objectDefinition` --
   dry-run only catches Policy wrapper errors, not embedded CR errors.
@@ -271,11 +273,12 @@ whether the source is a git repo URL or a local directory path.
    has a custom source-CR (e.g. a custom `sriovOperatorConfigForSNO.yaml`
    instead of the reference `SriovOperatorConfig.yaml`). Stage these files
    aside so the next step's replacement can't delete them.
-6. **Replace the source-CR directory** for the target version. The
-   container image differs by use case — see the matching reference
-   guide. Auto-discover which container tool is
-   available (`oc`, `podman`, `docker`, `skopeo`). Or copy from local
-   reference if available (e.g. `ref-{version}/`).
+6. **Replace the source-CR directory** for the target version. Extract
+   from the container using the method in the matching reference guide
+   (it differs by use case — e.g. Core streams a base64 tar, so `oc
+   image extract` does not apply). Prefer re-extracting each run; reuse
+   a local `ref-{version}/` only when confirmed latest, per EXPLAIN
+   step 1.
 7. **Restore staged custom source-CRs** -- copy the files staged in
    step 5 back into the output, in a directory **separate** from the
    managed reference source-CRs (e.g. `custom-crs/`) -- never intermixed
@@ -366,8 +369,10 @@ each item fully before starting the next one. Processing steps:
    "GVK Replacement Procedure."
    **Critical:** when writing output PolicyGenerator files, preserve
    the EXACT `path:` values the partner used for custom/partner-specific
-   CRs. If the partner used `custom-crs/AcmeSecret.yaml`, the output
-   must use the same path -- never replace with a reference path.
+   CRs -- never replace with a reference path. The one exception is a
+   custom CR that was intermixed under the managed source-CR directory
+   and relocated in Setup step 7: use its new separate-directory path
+   (e.g. `custom-crs/AcmeSecret.yaml`) and preserve that.
 4. **CR removal** -- when the reference removed a CR and the source-cr
    file no longer exists in the target version, remove the manifest
    entry from the partner's output. Policy generation will fail if it

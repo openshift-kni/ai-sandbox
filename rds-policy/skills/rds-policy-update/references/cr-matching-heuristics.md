@@ -69,9 +69,11 @@ even when the names are identical.
 - Profile hierarchy may change (single profile split into multiple
   arch-specific profiles). Compare the data sections.
 - When per-MachineConfigPool Tuned CRs exist, match by role/intent, not
-  name. As with PerformanceProfile, the reference
-  `spec.recommend[].machineConfigPoolSelector` is usually a placeholder
-  that won't equal the partner's -- treat it as a weak hint and confirm.
+  name. As with PerformanceProfile, the reference selector
+  (`spec.recommend[].machineConfigLabels`, e.g.
+  `machineconfiguration.openshift.io/role: $mcp`) is usually a
+  placeholder that won't equal the partner's -- treat it as a weak hint
+  and confirm.
 
 ### MachineConfig
 - Primary: `metadata.name` prefix pattern, `spec.config.storage.files[].path`
