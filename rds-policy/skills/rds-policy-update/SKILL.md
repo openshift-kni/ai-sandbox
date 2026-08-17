@@ -111,13 +111,12 @@ to merge.
 
 ## EXPLAIN Workflow
 
-1. **Locate references** -- check for local `ref-{version}/` directories
-   first. Check each requested version separately: if its directory
-   exists and contains the source-CR directory, use it as-is -- do NOT
-   extract from containers. Fall back to container extraction for any
-   version whose local directory is missing or lacks the source-CR
-   directory. The matching reference guide gives the container
-   image and layout.
+1. **Locate references** -- prefer extracting from the container each run
+   so periodic reference fixes are picked up. Only reuse a local
+   `ref-{version}/` directory when you can confirm it came from the
+   latest container for that version (e.g. a recorded image digest);
+   otherwise re-extract. Check each requested version separately. The
+   matching reference guide gives the container image and layout.
 2. **Diff PolicyGenerator files** between versions -- the matching
    reference guide names the files for the use case. These are the
    high-level view of what changed.
@@ -278,9 +277,15 @@ whether the source is a git repo URL or a local directory path.
    available (`oc`, `podman`, `docker`, `skopeo`). Or copy from local
    reference if available (e.g. `ref-{version}/`).
 7. **Restore staged custom source-CRs** -- copy the files staged in
-   step 5 back to their exact partner paths in the new version's output
-   directory. These custom files must be:
+   step 5 back into the output, in a directory **separate** from the
+   managed reference source-CRs (e.g. `custom-crs/`) -- never intermixed
+   under the reference source-CR directory, which is replaced wholesale
+   on upgrade (anything under it is lost). If the partner had intermixed
+   custom CRs under the managed directory, relocate them to the separate
+   directory and update the `path:` references in their PolicyGenerator,
+   flagging the change. These custom files must be:
    - Preserved unchanged during merge (do not replace with reference paths)
+   - Never overwritten by a reference-delivered source-CR
    - Flagged for user review (the custom CR may need updates for the
      target version's API changes)
 8. **Verify symlinks** -- check that every `path:` the partner uses in

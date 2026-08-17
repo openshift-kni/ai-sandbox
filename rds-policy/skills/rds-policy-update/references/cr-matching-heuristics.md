@@ -52,7 +52,10 @@ even when the names are identical.
 - Secondary: `spec.hugepages`, `spec.realTimeKernel`
 - Usually 1-to-1 but partner may have per-hardware-type variants.
 - When multiple PerformanceProfiles exist (e.g. one per
-  MachineConfigPool), match by `spec.nodeSelector`, not name.
+  MachineConfigPool), match by role/intent (e.g. high-throughput vs
+  control-plane), not name. The reference `spec.nodeSelector` is usually
+  a placeholder that will NOT equal the partner's -- use it only as a
+  weak hint and confirm the mapping with the user.
 
 ### Subscription
 - Primary: `spec.name` (operator name)
@@ -65,8 +68,10 @@ even when the names are identical.
   content structure and recommend priority, not name.
 - Profile hierarchy may change (single profile split into multiple
   arch-specific profiles). Compare the data sections.
-- When per-MachineConfigPool Tuned CRs exist, match by
-  `spec.recommend[].machineConfigPoolSelector`, not name.
+- When per-MachineConfigPool Tuned CRs exist, match by role/intent, not
+  name. As with PerformanceProfile, the reference
+  `spec.recommend[].machineConfigPoolSelector` is usually a placeholder
+  that won't equal the partner's -- treat it as a weak hint and confirm.
 
 ### MachineConfig
 - Primary: `metadata.name` prefix pattern, `spec.config.storage.files[].path`
