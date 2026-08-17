@@ -291,9 +291,12 @@ whether the source is a git repo URL or a local directory path.
    - Never overwritten by a reference-delivered source-CR
    - Flagged for user review (the custom CR may need updates for the
      target version's API changes)
-8. **Verify symlinks** -- check that every `path:` the partner uses in
-   their PolicyGenerator YAML still resolves in the new source-CR
-   directory. If a path is missing, the merge must update it.
+8. **Verify paths** -- check that every managed reference `path:` the
+   partner uses still resolves in the new source-CR directory (including
+   backward-compatible symlinks); if one is missing, the merge must
+   update it. Verify relocated custom-CR paths (e.g. `custom-crs/...`
+   from step 7) against the separate custom directory instead -- do NOT
+   rewrite them into the managed tree.
 
 ### Processing (checklist-driven)
 
