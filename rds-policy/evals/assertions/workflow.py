@@ -38,6 +38,37 @@ def _extract_questions(context):
     return questions
 
 
+def no_topology_question(_output, context):
+    """Fail if the agent asked the user to choose a cluster topology.
+
+    Preserving the partner's topology is deterministic (CNF-23930), so the
+    agent must NOT ask which topology to use. This is a hard pass/fail gate.
+    """
+    keywords = (
+        "topology",
+        "machineconfigpool",
+        "worker-1",
+        "worker-2",
+        "worker-3",
+        "pool",
+    )
+    questions = _extract_questions(context)
+    asked = [
+        q for q in questions if any(k in (q["text"] or "").lower() for k in keywords)
+    ]
+    if asked:
+        return {
+            "pass_": False,
+            "score": 0,
+            "reason": f"Agent asked a topology-selection question: {asked[0]['text'][:160]}",
+        }
+    return {
+        "pass_": True,
+        "score": 1.0,
+        "reason": f"No topology-selection question ({len(questions)} AskUserQuestion calls total)",
+    }
+
+
 def log_user_questions(_output, context):
     """Extract and log all AskUserQuestion calls with questions and answers."""
     questions = _extract_questions(context)

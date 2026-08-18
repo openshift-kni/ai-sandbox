@@ -14,6 +14,7 @@ quality) are handled by llm-rubric in promptfooconfig.yaml.
 """
 
 import jmespath
+import yaml
 
 from common import (
     collect_manifests,
@@ -220,6 +221,49 @@ def check_quote_preservation(_output, context):
         "pass_": True,
         "score": 1.0,
         "reason": "All quote patterns preserved",
+    }
+
+
+def check_absent_patterns(_output, context):
+    """Patterns that must NOT appear in the output PolicyGenerator files.
+
+    Used to verify the agent didn't adopt reference-only values into the
+    partner's policies — e.g. the reference's example topology pool
+    references (mcp-worker-1/2/3) when the partner has their own pool.
+    Scans PolicyGenerator docs only, NOT the copied source-crs/ library:
+    replacing source-crs pulls in every reference CR (including pools the
+    partner doesn't use), so scanning it would false-positive. What
+    matters is whether those references leaked into the partner's PGs.
+    """
+    config = context.get("config") or {}
+    forbidden = config.get("forbidden_patterns", [])
+    written = collect_written_files(context)
+    pg_text = []
+    for fp, content in written.items():
+        if not fp.endswith((".yaml", ".yml")):
+            continue
+        try:
+            docs = list(yaml.safe_load_all(content))
+        except yaml.YAMLError:
+            continue
+        # Serialize only the PolicyGenerator docs — not sibling docs or
+        # comments in the same file, which could mention a reference name
+        # without it being an actual topology leak.
+        for d in docs:
+            if isinstance(d, dict) and d.get("kind") == "PolicyGenerator":
+                pg_text.append(yaml.safe_dump(d))
+    blob = "\n".join(pg_text)
+    present = [p for p in forbidden if p in blob]
+    if present:
+        return {
+            "pass_": False,
+            "score": 0,
+            "reason": f"Forbidden patterns present in output PolicyGenerator(s): {', '.join(present)}",
+        }
+    return {
+        "pass_": True,
+        "score": 1.0,
+        "reason": "No forbidden patterns found in output PolicyGenerator(s)",
     }
 
 

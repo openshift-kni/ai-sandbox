@@ -623,3 +623,73 @@ tests:
           0.0 if neither flagged or only noted without warning severity.
         threshold: 0.5
         metric: required-cr-severity
+
+  # ============================================================
+  # T4: TOPOLOGY PRESERVATION — keep partner MCP structure/naming
+  #                                                    (CNF-23930)
+  #
+  # Fixtures: ref-mn-4.18/, ref-mn-4.20/ (telco-core-style multinode
+  # reference) and partner-multinode/ (partner with ONE worker pool).
+  #
+  # CR shapes mirror openshift-kni/telco-reference telco-core: concrete
+  # MachineConfigPool files (metadata.name worker-N). The reference
+  # EXAMPLE ships three pools (mcp-worker-1/2/3.yaml → worker-1/2/3);
+  # the partner runs a SINGLE pool with their own name (worker-cnf, via
+  # custom-crs/). Cluster topology is the partner's — the agent must
+  # keep the partner's one pool, must NOT expand to the reference's
+  # three-pool example, and must NOT ask which to use (deterministic).
+  # A Subscription channel bump (4.18→4.20) is the real merge work that
+  # should flow through while the topology stays the partner's.
+  # ============================================================
+
+  - description: "T4 TOPOLOGY PRESERVATION — keep partner MCP structure/naming"
+    vars:
+      prompt: "upgrade my telco core policies from 4.18 to 4.20. the policy source is partner-multinode/. use the local reference directories ref-mn-4.18/ and ref-mn-4.20/ as the 4.18 and 4.20 references (do not use ref-4.18/ or ref-4.20/). do the full EXPLAIN and MERGE end-to-end, use recommended defaults for any conflicts"
+    assert:
+      - type: skill-used
+        value: rds-policy-update
+        metric: skill-activation
+
+      # Deterministic: partner's single pool preserved (custom-crs path kept)
+      - type: python
+        value: file://assertions/merge.py:check_file_content
+        metric: merge-file-content
+        config:
+          target_version: "4.20"
+          checks:
+            - name: partner_pool_preserved
+              type: exists
+              cr: "custom-crs/mcp-worker-cnf"
+
+      # Deterministic: reference example pools must not be added to partner PGs
+      - type: python
+        value: file://assertions/merge.py:check_absent_patterns
+        metric: no-reference-topology
+        config:
+          forbidden_patterns:
+            - "mcp-worker-1"
+            - "mcp-worker-2"
+            - "mcp-worker-3"
+
+      # Semantic: preserved partner topology, didn't expand, didn't ask
+      - type: llm-rubric
+        value: |
+          The partner's policies define a SINGLE MachineConfigPool named
+          worker-cnf (via custom-crs/mcp-worker-cnf.yaml). The 4.20
+          reference example ships three pools (worker-1/2/3). The agent
+          should:
+          1. Keep the partner's single pool (worker-cnf) and NOT expand
+             to the reference's three-pool example topology.
+          2. NOT ask the user which topology to follow — keeping the
+             partner's topology is the correct, deterministic choice.
+          Score 1.0 if both hold, 0.5 if the partner's topology is
+          preserved but the agent asked which to use, 0.0 if it adopted
+          the reference topology or dropped the partner's pool.
+        threshold: 0.5
+        metric: topology-preservation
+        transform: file://assertions/common.py:enrich_output
+
+      # Deterministic: agent must NOT ask which topology to use
+      - type: python
+        value: file://assertions/workflow.py:no_topology_question
+        metric: no-topology-question

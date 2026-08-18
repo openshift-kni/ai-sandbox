@@ -1,4 +1,4 @@
-.PHONY: setup eval eval-repeat eval-view lint clean help
+.PHONY: setup eval eval-filter eval-repeat eval-view lint clean help
 
 # Ensure promptfoo uses the uv-managed Python (has pyyaml etc.)
 export PROMPTFOO_PYTHON := $(shell cd .. && uv run which python)
@@ -10,6 +10,9 @@ setup: ## Install eval dependencies
 
 eval: ## Run all evals (single pass)
 	promptfoo eval --no-cache
+
+eval-filter: ## Run evals whose description matches PATTERN (e.g. make eval-filter PATTERN=T4)
+	promptfoo eval --no-cache --filter-pattern "$(PATTERN)"
 
 eval-repeat: ## Run all evals 3x to measure variance
 	promptfoo eval --no-cache --repeat 3

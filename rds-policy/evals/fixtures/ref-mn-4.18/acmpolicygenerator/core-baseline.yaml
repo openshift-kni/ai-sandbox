@@ -1,0 +1,25 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: core-baseline
+policyDefaults:
+  namespace: ztp-core-baseline
+  placement:
+    labelSelector:
+      core-baseline: ""
+  remediationAction: inform
+policies:
+- name: core-mcp
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "1"
+  manifests:
+    # Reference EXAMPLE topology: three worker pools (worker-1/2/3).
+    # Only an example — partners bring their own pool structure.
+    - path: source-crs/mcp-worker-1.yaml
+    - path: source-crs/mcp-worker-2.yaml
+    - path: source-crs/mcp-worker-3.yaml
+- name: core-sub
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "2"
+  manifests:
+    - path: source-crs/SubscriptionOCP.yaml
