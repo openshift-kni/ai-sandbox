@@ -3,12 +3,15 @@ name: rds-policy-update
 description: >
   Generates updated OpenShift RDS Day 2 configuration policies for version
   upgrades by merging new reference content with partner PolicyGenerator
-  customizations. Use when user mentions "update policies", "RDS upgrade",
-  "4.18 to 4.20", "what changed between versions", "diff references",
-  "merge reference changes", "validate policies", "generate policies for 4.x",
-  or provides two OCP version numbers in the context of RDS or Day 2 config.
-  Also triggers for standalone EXPLAIN or VALIDATE. Do NOT use for cluster
-  upgrades, fresh installs, or fleet rollout.
+  customizations. Supports multiple use cases — same workflow,
+  different CR reference containers. Use when user mentions "update policies",
+  "RDS upgrade", "4.18 to 4.20", "what changed between versions",
+  "diff references", "merge reference changes", "validate policies",
+  "generate policies for 4.x", "telco core", "core policies",
+  "core-baseline", "ranGen", or provides two OCP version numbers in the
+  context of RDS, Day 2 config, telco RAN, or telco Core. Also triggers
+  for standalone EXPLAIN or VALIDATE. Do NOT use for cluster upgrades,
+  fresh installs, or fleet rollout.
 license: Apache-2.0
 metadata:
   notice: >
@@ -26,16 +29,29 @@ versions. You work at the **PolicyGenerator** level -- that's input and output.
 **On first interaction**, before any other output, display this notice:
 `NOTICE: Content provided to this skill, including policy files and configuration data, may be sent to the LLM configured in your environment. Ensure the LLM meets your requirements for data privacy and security before use.`
 
+The workflow (EXPLAIN → MERGE → VALIDATE) is the same for every use
+case. Use-case specifics (container image, directory layout, CR
+catalog) live in the reference guides indexed below.
+
 ## What's In This Skill
 
 **References** (`references/`) -- domain knowledge to consult as needed:
-- `policygenerator-semantics.md` -- read when working with PolicyGenerator
-  structure, complianceType, or wave ordering
-- `cr-matching-heuristics.md` -- read when matching partner CRs to reference
-  changes, especially SRIOV and PTP
-- `hub-template-handling.md` -- read when encountering `{{hub ... hub}}`
-- `merge-conflict-resolution.md` -- read when deciding how to handle overlaps
-- `validate-phases.md` -- read before running dry-run validation
+
+**Pick the reference guide that matches the use case** (if unsure, ask the user):
+- `ran-reference-guide.md` -- RAN container image, layout, PG naming,
+  partner versioning
+- `core-reference-guide.md` -- Core container image, layout, PG naming,
+  partner versioning
+
+**Common** (always relevant, regardless of use case):
+- `cr-matching-heuristics.md` -- per-CR-type matching rules
+- `cr-guidance/` -- deeper per-CR-type merge guidance; read a CR
+  type's file when that CR appears on the checklist
+- `policygenerator-semantics.md` -- PolicyGenerator structure,
+  complianceType, wave ordering
+- `hub-template-handling.md` -- `{{hub ... hub}}` templates
+- `merge-conflict-resolution.md` -- how to handle overlaps
+- `validate-phases.md` -- dry-run validation
 
 ## Important
 
@@ -61,6 +77,13 @@ VALIDATE), always end with this notice on its own line:
 ## Inputs
 
 **Always required:**
+- **Use case** -- which reference applies. Auto-detect from context:
+  `acm-*-ranGen.yaml`, `du-profile`, PTP/SRIOV-FEC → RAN;
+  `core-baseline.yaml`, `core-overlay.yaml`, `core-finish.yaml`,
+  `core-upgrade*.yaml`, MetalLB/ODF, `rds-core-*` branches → Core. If ambiguous, ask. This
+  skill operates on **source CRs**; their location is use-case-specific
+  and given in the matching reference guide. Wherever this file says
+  "source-crs", use that directory.
 - **Current version** -- e.g. 4.18
 - **Target version** -- e.g. 4.20
 
@@ -72,16 +95,13 @@ VALIDATE), always end with this notice on its own line:
 ## Capabilities
 
 - **EXPLAIN** -- diff two reference versions, classify changes per-CR.
-  Only needs the two versions -- no partner policies required.
-  Read `references/policygenerator-semantics.md` first -- it has the
-  extraction command for fetching reference CRs from the ZTP container.
+  Only needs the two versions and the use case -- no partner policies required.
+  Read the matching reference guide and `policygenerator-semantics.md`.
 - **MERGE** -- combine reference updates with partner customizations.
-  Read `references/cr-matching-heuristics.md`,
-  `references/merge-conflict-resolution.md`,
-  `references/hub-template-handling.md`, and every file in
-  `references/cr-guidance/` before starting. The cr-guidance files
-  contain restructuring rules for specific CRs — read all of them
-  so you know which CRs need special handling during the merge.
+  Read the matching reference guide, `cr-matching-heuristics.md`,
+  `merge-conflict-resolution.md`, and `hub-template-handling.md`. For
+  each CR type with a file in `cr-guidance/`, read it when processing
+  that CR.
 - **VALIDATE** -- dry-run merged policies against hub.
   Read `references/validate-phases.md` before starting.
 
@@ -91,21 +111,25 @@ to merge.
 
 ## EXPLAIN Workflow
 
-1. **Locate references** -- check for local `ref-{version}/` directories
-   first. If they exist and contain `source-crs/`, use them as-is -- do
-   NOT extract from containers. Only fall back to ZTP container extraction
-   if no local ref directories are found.
-2. **Diff PolicyGenerator examples** (`acm-*-ranGen.yaml`) between versions.
-   These are the high-level view of what changed.
-3. **Diff source-crs content** -- compare EVERY source-cr file that
-   differs between versions, not just the ones with obvious changes.
+1. **Locate references** -- prefer extracting from the container each run
+   so periodic reference fixes are picked up. Only reuse a local
+   `ref-{version}/` directory when you can confirm it came from the
+   latest container for that version (e.g. a recorded image digest);
+   otherwise re-extract. Check each requested version separately. The
+   matching reference guide gives the container image and layout.
+2. **Diff PolicyGenerator files** between versions -- the matching
+   reference guide names the files for the use case. These are the
+   high-level view of what changed.
+3. **Diff CR content** (the source-CR directory) -- compare EVERY CR
+   file that differs between versions, not just the ones with obvious
+   changes.
    Even a single added field matters -- it may conflict with a partner
    patch or represent a new default the partner should know about.
 4. **Detect structural changes** -- new/removed files, directory
    reorganization, new subdirectories, symlinks.
 5. **Classify each change**: path-only, content change, GVK replacement,
    new CR, removed CR, deprecated CR.
-   - For CRs with guidance in `references/cr-guidance/`, read that
+   - For CRs with guidance in `cr-guidance/`, read that
      guidance and use it to describe restructuring details — e.g.
      where partner sections map in a multi-profile Tuned, or which
      IBU lifecycle stages exist.
@@ -174,8 +198,10 @@ All outputs (reports, checklist, merged policies) go inside this directory.
   compatible symlinks at the root level -- if they exist, old manifest
   path references still resolve and do NOT need updating.
 
-- Wave ordering: 1-2 (install) -> 10 (configure) -> 100 (site).
-  Don't move CRs across boundaries.
+- Wave ordering comes from the `ran.openshift.io/ztp-deploy-wave`
+  annotation and differs by use case (RAN 1/2/10/100; Core uses its own
+  values, e.g. 1/5/6/200). Preserve the reference's waves; don't move
+  CRs across them.
 
 - Policy CRD accepts unknown fields inside `objectDefinition` --
   dry-run only catches Policy wrapper errors, not embedded CR errors.
@@ -221,12 +247,15 @@ whether the source is a git repo URL or a local directory path.
    - If a local directory path: `cp -a` the directory into the output
      directory. Do NOT modify the original.
    - Ask the user for permission before cloning/copying.
-3. **Create** a new version directory alongside the existing one
-   (e.g. `version_4.20/` next to `version_4.18.5/`).
-   - Copy the partner's current version directory as the starting point.
-4. **Source-crs drift detection** -- before replacing source-crs,
-   diff every source-cr file the partner references (via `path:` in
-   their PG manifests) against the corresponding reference source-cr
+3. **Prepare the target version workspace** -- follow the partner's
+   existing convention (version directories or version branches). Copy
+   the partner's current version content as the starting point. Also
+   follow the partner's PolicyGenerator file naming convention -- if
+   they use e.g. `core-baseline-production.yaml`, keep that pattern
+   rather than renaming to the reference names.
+4. **CR drift detection** -- before replacing the source-CR directory,
+   diff every CR file the partner references (via `path:` in
+   their PG manifests) against the corresponding reference CR
    for the **source** version. Any field that differs is a direct
    edit the partner made instead of using a PG patch. These edits
    will be silently lost when source-crs are replaced with the target
@@ -237,26 +266,38 @@ whether the source is a git repo URL or a local directory path.
    - Suggest adding a PG patch to preserve the customization
    Only diff source-crs the partner actually references in their PG
    manifests — ignore unused files.
-5. **Replace source-crs/** for the target version. Either:
-   - Extract `/home/ztp/` from the ZTP container image
-     (`registry.redhat.io/openshift4/ztp-site-generate-rhel8:v{version}`).
-     Auto-discover which container tool is available at runtime
-     (`oc`, `podman`, `docker`, `skopeo`) and compose the appropriate
-     extraction commands.
-   - Or copy from local reference if available (e.g. `ref-{version}/source-crs/`).
-6. **Verify symlinks** -- check that every `path:` the partner uses in
-   their PolicyGenerator YAML still resolves in the new source-crs/.
-   If a path is missing, the merge must update it.
-7. **Identify custom source-CRs** -- compare each `path:` in the
-   partner's PolicyGenerator against the reference PG examples for the
-   source version. If a partner path differs from the reference path for
-   the same CR kind, the partner has a custom source-CR (e.g. a custom
-   `sriovOperatorConfigForSNO.yaml` instead of the reference
-   `SriovOperatorConfig.yaml`). These custom files must be:
+5. **Identify and stage custom source-CRs** -- before replacing the
+   directory, compare each `path:` in the partner's PolicyGenerator
+   against the reference PG examples for the source version. If a partner
+   path differs from the reference path for the same CR kind, the partner
+   has a custom source-CR (e.g. a custom `sriovOperatorConfigForSNO.yaml`
+   instead of the reference `SriovOperatorConfig.yaml`). Stage these files
+   aside so the next step's replacement can't delete them.
+6. **Replace the source-CR directory** for the target version. Extract
+   from the container using the method in the matching reference guide
+   (it differs by use case — e.g. Core streams a base64 tar, so `oc
+   image extract` does not apply). Prefer re-extracting each run; reuse
+   a local `ref-{version}/` only when confirmed latest, per EXPLAIN
+   step 1.
+7. **Restore staged custom source-CRs** -- copy the files staged in
+   step 5 back into the output, in a directory **separate** from the
+   managed reference source-CRs (e.g. `custom-crs/`) -- never intermixed
+   under the reference source-CR directory, which is replaced wholesale
+   on upgrade (anything under it is lost). If the partner had intermixed
+   custom CRs under the managed directory, relocate them to the separate
+   directory and update the `path:` references in their PolicyGenerator,
+   flagging the change. These custom files must be:
    - Preserved unchanged during merge (do not replace with reference paths)
-   - Copied to the new version's output directory
+   - Never overwritten by a reference-delivered source-CR
    - Flagged for user review (the custom CR may need updates for the
      target version's API changes)
+8. **Verify paths** -- check that every managed reference `path:` the
+   partner uses still resolves in the new source-CR directory (including
+   backward-compatible symlinks); if one is missing, the merge must
+   update it to the new reference location. For relocated custom-CR paths
+   (e.g. `custom-crs/...` from step 7), verify them against the separate
+   custom directory and leave them pointing there -- do not redirect a
+   custom CR's `path:` into the reference source-CR directory.
 
 ### Processing (checklist-driven)
 
@@ -332,8 +373,10 @@ each item fully before starting the next one. Processing steps:
    "GVK Replacement Procedure."
    **Critical:** when writing output PolicyGenerator files, preserve
    the EXACT `path:` values the partner used for custom/partner-specific
-   CRs. If the partner used `custom-crs/AcmeSecret.yaml`, the output
-   must use the same path -- never replace with a reference path.
+   CRs -- never replace with a reference path. The one exception is a
+   custom CR that was intermixed under the managed source-CR directory
+   and relocated in Setup step 7: use its new separate-directory path
+   (e.g. `custom-crs/AcmeSecret.yaml`) and preserve that.
 4. **CR removal** -- when the reference removed a CR and the source-cr
    file no longer exists in the target version, remove the manifest
    entry from the partner's output. Policy generation will fail if it
@@ -472,9 +515,12 @@ won't process the new version's policies.
 
 1. **Coverage scan** (mandatory) -- compare the reference PG examples
    against the partner's CR set:
-   a. Identify which reference CRs are **required** (uncommented in
-      all reference PG examples) vs **optional** (commented out or
-      only in some examples).
+   a. Identify which reference CRs are **required** vs **optional**
+      using the catalog rules in the matching reference guide's
+      "Discovering the CR Catalog" section (RAN derives this from the
+      reference PG examples -- uncommented in all examples means
+      required; Core derives it from the `required/` vs `optional/`
+      reference-CR directories).
    b. For each required CR the partner does not include, output exactly:
       `WARNING: required CR {name} is not included in your policies.`
       You MUST use the words "WARNING" and "required" so the severity

@@ -1,11 +1,15 @@
 # CR Matching Heuristics
 
+Common per-CR-type matching rules for all use cases.
+
 Match by **GVK + resource identity** (metadata.name, metadata.namespace).
 Never match by policy name, file name, or file structure.
 
 ## Confidence Levels
 
-**Exact:** Same GVK + same name. Merge automatically.
+**Exact:** Same GVK + same name. Merge automatically -- unless a per-GVK
+rule below overrides name-based matching or restricts auto-update (see
+"Per-GVK Matching Fields").
 
 **Fuzzy:** Same GVK, different name, similar spec structure. Always requires
 user confirmation.
@@ -25,6 +29,11 @@ may need to be replicated across all matches. Present all candidates to the user
 
 ## Per-GVK Matching Fields
 
+These per-GVK rules take precedence over the generic "same GVK + same
+name" exact match above. Apply the resource's field-based matching, and
+honor any never-auto-update restriction (e.g. Secret), before merging --
+even when the names are identical.
+
 ### SriovNetworkNodePolicy
 - Primary: `spec.deviceType`, `spec.resourceName`
 - Secondary: `spec.pfNames`, `spec.numVfs`
@@ -42,6 +51,11 @@ may need to be replicated across all matches. Present all candidates to the user
 - Primary: `spec.cpu.isolated`, `spec.cpu.reserved`
 - Secondary: `spec.hugepages`, `spec.realTimeKernel`
 - Usually 1-to-1 but partner may have per-hardware-type variants.
+- When multiple PerformanceProfiles exist (e.g. one per
+  MachineConfigPool), match by role/intent (e.g. high-throughput vs
+  control-plane), not name. The reference `spec.nodeSelector` is usually
+  a placeholder that will NOT equal the partner's -- use it only as a
+  weak hint and confirm the mapping with the user.
 
 ### Subscription
 - Primary: `spec.name` (operator name)
@@ -54,10 +68,26 @@ may need to be replicated across all matches. Present all candidates to the user
   content structure and recommend priority, not name.
 - Profile hierarchy may change (single profile split into multiple
   arch-specific profiles). Compare the data sections.
+- When per-MachineConfigPool Tuned CRs exist, match by role/intent, not
+  name. As with PerformanceProfile, the reference selector
+  (`spec.recommend[].machineConfigLabels`, e.g.
+  `machineconfiguration.openshift.io/role: $mcp`) is usually a
+  placeholder that won't equal the partner's -- treat it as a weak hint
+  and confirm.
 
 ### MachineConfig
 - Primary: `metadata.name` prefix pattern, `spec.config.storage.files[].path`
 - Match by what files/units the MachineConfig manages.
+
+### BGPPeer (MetalLB)
+- Primary: `spec.peerASN`, `spec.peerAddress`
+- 1-to-N matching is common (one reference peer, many partner peers).
+
+### Secret
+- Never auto-update any Secret, even on an exact GVK + name match.
+  Secrets carry partner- or environment-specific data (e.g.
+  `rook-ceph-external-cluster-details` for external Ceph/ODF, pull
+  secrets, MetalLB/BGP credentials). Flag for user review only.
 
 ## GVK Replacements
 

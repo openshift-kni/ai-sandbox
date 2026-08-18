@@ -1,23 +1,9 @@
 # PolicyGenerator Semantics
 
-## Reference Source
-
-Reference CRs and PolicyGenerator examples are extracted from the ZTP site
-generator container: `registry.redhat.io/openshift4/ztp-site-generate-rhel8:{version}`
-(e.g. `:4.18`, `:4.20`).
-
-The content at `/home/ztp/` inside the image needs to be extracted to a
-local directory. Auto-discover which container tool is available at
-runtime (`oc`, `podman`, `docker`, `skopeo`) and compose the appropriate
-extraction commands.
-
-Container layout at `/home/ztp/`:
-- `source-crs/` -- individual CR YAML files (base templates). Directory
-  structure may change between versions (flat vs operator subdirectories).
-  Check for backward-compatible symlinks.
-- `argocd/example/acmpolicygenerator/` -- PolicyGenerator YAML examples
-  for different profiles (common, group-du-sno, site, etc.)
-- `reference/` -- telco-reference content organized by operator
+Common PolicyGenerator concepts shared across all use cases.
+For use-case-specific details (container image, directory layout,
+PG naming, partner versioning), see the use-case reference guide
+(`ran-reference-guide.md` or `core-reference-guide.md`).
 
 ## PolicyGenerator vs Policy CR
 
@@ -29,13 +15,17 @@ Container layout at `/home/ztp/`:
 
 ## PolicyGenerator YAML Structure
 
+The example below uses generic names; `path:` entries point into the
+use-case-specific source-CR directory (see the use-case reference
+guide for its location).
+
 ```yaml
 apiVersion: policy.open-cluster-management.io/v1
 kind: PolicyGenerator
 metadata:
-  name: acm-common-ranGen
+  name: common-policies
 policyDefaults:
-  namespace: ztp-common
+  namespace: policies-common
   placement:
     labelSelector:
       matchExpressions:
@@ -46,13 +36,13 @@ policyDefaults:
 policies:
   - name: common-config-policy
     manifests:
-      - path: source-crs/SriovSubscription.yaml
+      - path: <source-cr-dir>/OperatorSubscription.yaml
         patches:
           - metadata:
-              name: sriov-network-operator-subscription
+              name: operator-subscription
             spec:
               channel: "4.18"
-      - path: source-crs/PtpSubscription.yaml
+      - path: <source-cr-dir>/OperatorConfig.yaml
 ```
 
 Key elements:
@@ -77,15 +67,12 @@ clusters. A separate policy with `complianceType: mustnothave` is needed.
 
 ## Wave Ordering
 
-Policies apply in wave order via the
-`policy.open-cluster-management.io/triggerBinding` annotation:
-
-- **Wave 1** -- subscriptions and operator installs
-- **Wave 2** -- operator configs depending on wave 1
-- **Wave 10** -- group-level configs (profile-specific)
-- **Wave 100** -- site-specific configs
-
-Preserve wave assignments from the reference unless user explicitly changes them.
+Policies apply in wave order via the `ran.openshift.io/ztp-deploy-wave`
+annotation (lower waves apply first). The specific values and their
+meaning differ by use case -- e.g. RAN uses 1 (subscriptions) /
+2 (configs) / 10 (group) / 100 (site), while Core uses its own values
+(e.g. 1, 5, 6, 200). Do not impose a fixed ladder; preserve the wave
+values from the reference unless the user explicitly changes them.
 
 ## Patches as Kustomize-like Overlays
 
