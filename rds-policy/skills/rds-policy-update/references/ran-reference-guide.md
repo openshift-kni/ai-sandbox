@@ -6,13 +6,19 @@
 registry.redhat.io/openshift4/ztp-site-generate-rhel8:v{version}
 ```
 
-Extract `/home/ztp/` from the container. Auto-discover which container
-tool is available (`oc`, `podman`, `docker`, `skopeo`).
+The image exposes an `extract` command that streams a path as a tar on
+stdout. Run it and unpack `/home/ztp/`:
+```bash
+podman run --log-driver=none --rm registry.redhat.io/openshift4/ztp-site-generate-rhel8:v{version} extract /home/ztp --tar | tar x -C {output_dir}
+```
+This unpacks the contents of the container's `/home/ztp/` into
+`{output_dir}` (see Directory Layout below). `docker run` works the same
+way if `podman` isn't available.
 
 ## Directory Layout
 
 ```
-/home/ztp/
+{output_dir}/
 ├── source-crs/                           # Individual CR YAMLs (flat)
 ├── argocd/example/acmpolicygenerator/    # PolicyGenerator examples
 │   ├── acm-common-ranGen.yaml

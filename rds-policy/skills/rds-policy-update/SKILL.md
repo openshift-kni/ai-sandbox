@@ -294,9 +294,10 @@ whether the source is a git repo URL or a local directory path.
 8. **Verify paths** -- check that every managed reference `path:` the
    partner uses still resolves in the new source-CR directory (including
    backward-compatible symlinks); if one is missing, the merge must
-   update it. Verify relocated custom-CR paths (e.g. `custom-crs/...`
-   from step 7) against the separate custom directory instead -- do NOT
-   rewrite them into the managed tree.
+   update it to the new reference location. For relocated custom-CR paths
+   (e.g. `custom-crs/...` from step 7), verify them against the separate
+   custom directory and leave them pointing there -- do not redirect a
+   custom CR's `path:` into the reference source-CR directory.
 
 ### Processing (checklist-driven)
 
