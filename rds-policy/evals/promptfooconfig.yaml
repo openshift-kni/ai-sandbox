@@ -9,6 +9,13 @@ prompts:
 providers:
   - id: anthropic:claude-agent-sdk
     config:
+      # Agent-under-test: Opus 4.8 on Vertex. CLAUDE_CODE_USE_VERTEX routes the
+      # SDK to Vertex (via ADC + ANTHROPIC_VERTEX_PROJECT_ID / CLOUD_ML_REGION from
+      # env), so the model is not overridden by the inference.local broker.
+      # Override the model-under-test per-run with RDS_AGENT_MODEL.
+      model: '{{ env.RDS_AGENT_MODEL | default("claude-opus-4-8", true) }}'
+      env:
+        CLAUDE_CODE_USE_VERTEX: "1"
       working_dir: '{{ env.RDS_FIXTURES_DIR | default("./fixtures", true) }}'
       setting_sources: ['project']
       skills: ['rds-policy-update']
@@ -34,7 +41,7 @@ extensions:
 defaultTest:
   options:
     provider:
-      id: '{{ env.PROMPTFOO_GRADING_PROVIDER | default("vertex:claude-sonnet-4-6", true) }}'
+      id: '{{ env.PROMPTFOO_GRADING_PROVIDER | default("vertex:claude-sonnet-5", true) }}'
       config:
         projectId: '{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}'
         region: '{{ env.CLOUD_ML_REGION }}'
