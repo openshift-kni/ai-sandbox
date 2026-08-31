@@ -81,12 +81,30 @@ score, token usage, cost, latency, model IDs, and timestamps. It is large and
 can contain agent transcripts, so it stays on the `PVC` as drill-down only and
 rotates out.
 
+We keep it for one case: a failed run. `summary.json` tells us which test
+dropped; the full file tells us why. It has the judge's reasoning for each score,
+the agent's transcript, and what the skill produced (the `rds-merge-*` outputs),
+so we can see what went wrong or re-grade later without re-running the agent. This
+matters because the evals are non-deterministic: a bad run may not happen again,
+so if we do not save it the evidence is lost. That is also why the file rotates
+out — we only need it for runs that fail.
+
 What we track over time is a small `summary.json` distilled from it (pass rate,
 per-test score, cost, latency, model IDs, git SHA). It is tiny and numbers-only,
 so we commit it to the repo. Git is the durable record: diffable, reviewable,
 and independent of the cluster. Each run appends one summary and pushes it, using
 a repo write token that OpenShell holds and brokers just like the Vertex one. A
 small static page can render the committed history as a trend.
+
+As an option, we can self-host promptfoo's own server (a Docker image with a
+persistent volume) and push each run to it with `promptfoo share`. That gives the
+full promptfoo UI — run history, run-to-run diffs, and transcript drill-down —
+with nothing to build, and since it is our own server it does not break the
+third-party non-goal. The cost is a standing service to run, secure, and back up:
+it stores everything, transcripts included, in SQLite on a volume, has no
+built-in auth, and promptfoo itself calls it experimental, not production. So the
+git summary stays the durable trend record; the self-hosted server is an optional
+richer view over the same runs.
 
 ## Non-Goals
 
