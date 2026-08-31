@@ -43,6 +43,9 @@ defaultTest:
     provider:
       id: '{{ env.PROMPTFOO_GRADING_PROVIDER | default("vertex:claude-sonnet-5", true) }}'
       config:
+        # Reuse the agent's Vertex project/region (CLOUD_ML_REGION, e.g. global)
+        # so agent and judge share one region var. `make preflight` fails fast
+        # if either is unset (otherwise these interpolate to empty).
         projectId: '{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}'
         region: '{{ env.CLOUD_ML_REGION }}'
     rubricPrompt: file://graders/judge-prompt.txt
