@@ -1,0 +1,75 @@
+# Promptfoo runs the agent and grader against different Vertex models, so both
+# call Vertex directly instead of using OpenShell's single-model router.
+version: 1
+
+filesystem_policy:
+  include_workdir: false
+  read_only:
+    - /usr
+    - /lib
+    - /lib64
+    - /bin
+    - /sbin
+    - /etc
+    - /proc
+    # The sandbox image includes the Python used by `uv sync` here.
+    - /sandbox/.uv/python
+  read_write:
+    - /tmp
+    - /dev
+
+landlock:
+  compatibility: best_effort
+
+network_policies:
+  vertex:
+    name: vertex-direct-inference
+    endpoints:
+      - host: aiplatform.googleapis.com
+        port: 443
+        enforcement: enforce
+    binaries:
+      - path: /usr/local/bin/claude
+      - path: /usr/bin/node
+
+  # Local authorized-user ADC refreshes its access token through this endpoint.
+  google_auth:
+    name: google-adc-token
+    endpoints:
+      - host: oauth2.googleapis.com
+        port: 443
+        enforcement: enforce
+    binaries:
+      - path: /usr/local/bin/claude
+      - path: /usr/bin/node
+
+  npm:
+    name: npm-registry
+    endpoints:
+      - host: registry.npmjs.org
+        port: 443
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/node
+
+  pypi:
+    name: python-packages
+    endpoints:
+      - host: pypi.org
+        port: 443
+        enforcement: enforce
+      - host: files.pythonhosted.org
+        port: 443
+        enforcement: enforce
+    binaries:
+      - path: /usr/local/bin/uv
+
+  github:
+    name: eval-repo
+    endpoints:
+      - host: github.com
+        port: 443
+        enforcement: enforce
+    binaries:
+      - path: /usr/bin/git
+      - path: /usr/lib/git-core/**
