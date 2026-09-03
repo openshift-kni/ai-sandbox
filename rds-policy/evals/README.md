@@ -37,3 +37,5 @@ before tests and cleans up after.
 
 Results are stored in `~/.promptfoo/promptfoo.db` (not committed).
 Run `make eval-view` to browse results in the browser.
+
+To run the eval inside a confined OpenShell sandbox, see [OPENSHELL.md](OPENSHELL.md).
