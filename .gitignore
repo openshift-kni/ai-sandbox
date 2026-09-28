@@ -19,3 +19,6 @@ venv/
 
 # Environment
 .env
+
+# Local eval output
+rds-policy/evals/results/
