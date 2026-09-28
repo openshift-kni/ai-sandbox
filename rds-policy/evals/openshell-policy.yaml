@@ -1,5 +1,9 @@
-# Promptfoo runs the agent and grader against different Vertex models, so both
-# call Vertex directly instead of using OpenShell's single-model router.
+# The agent (Opus 4.8) and the grader (Sonnet 5) need different models, so both
+# call Vertex directly instead of using OpenShell's single-model router. The
+# attached google-vertex-ai provider supplies the credential: the sandbox only
+# holds a placeholder token and the proxy substitutes the real one on the way
+# out. Gateways with a global policy lock apply their own policy instead of
+# this file (`openshell policy get <sandbox>` shows which is in effect).
 version: 1
 
 filesystem_policy:
@@ -12,8 +16,6 @@ filesystem_policy:
     - /sbin
     - /etc
     - /proc
-    # The sandbox image includes the Python used by `uv sync` here.
-    - /sandbox/.uv/python
   read_write:
     - /tmp
     - /dev
@@ -29,18 +31,8 @@ network_policies:
         port: 443
         enforcement: enforce
     binaries:
-      - path: /usr/local/bin/claude
-      - path: /usr/bin/node
-
-  # Local authorized-user ADC refreshes its access token through this endpoint.
-  google_auth:
-    name: google-adc-token
-    endpoints:
-      - host: oauth2.googleapis.com
-        port: 443
-        enforcement: enforce
-    binaries:
-      - path: /usr/local/bin/claude
+      # Claude Code ships inside the pinned agent SDK; Promptfoo runs under node.
+      - path: /tmp/**/node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/claude
       - path: /usr/bin/node
 
   npm:
@@ -52,6 +44,8 @@ network_policies:
     binaries:
       - path: /usr/bin/node
 
+  # `setup-openshell` pip-installs uv with the image's python3, then uv pulls
+  # the project's dependencies.
   pypi:
     name: python-packages
     endpoints:
@@ -62,14 +56,23 @@ network_policies:
         port: 443
         enforcement: enforce
     binaries:
-      - path: /usr/local/bin/uv
+      - path: /usr/bin/python3*
+      - path: /tmp/.local/bin/uv
 
+  # `uv python install` fetches CPython from GitHub release assets.
   github:
-    name: eval-repo
+    name: github
     endpoints:
       - host: github.com
+        port: 443
+        enforcement: enforce
+      - host: release-assets.githubusercontent.com
+        port: 443
+        enforcement: enforce
+      - host: objects.githubusercontent.com
         port: 443
         enforcement: enforce
     binaries:
       - path: /usr/bin/git
       - path: /usr/lib/git-core/**
+      - path: /tmp/.local/bin/uv

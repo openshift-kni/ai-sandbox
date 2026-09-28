@@ -37,7 +37,8 @@ extensions:
   - file://hooks.js:extensionHook
 
 # Pin grading provider and judge prompt for stable llm-rubric scoring.
-# Override with PROMPTFOO_GRADING_PROVIDER env var for CI.
+# Local runs use Vertex's Google authentication. OpenShell selects `https`
+# through PROMPTFOO_GRADING_PROVIDER to use its brokered token instead.
 defaultTest:
   options:
     provider:
@@ -48,6 +49,22 @@ defaultTest:
         # if either is unset (otherwise these interpolate to empty).
         projectId: '{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}'
         region: '{{ env.CLOUD_ML_REGION }}'
+        # Leave room for Claude's thinking plus the rubric response.
+        max_tokens: &grader_max_tokens 2048
+        # HTTP client settings, used only when OpenShell selects `https`.
+        # The sandbox proxy replaces the placeholder token with a real one.
+        url: 'https://aiplatform.googleapis.com/v1/projects/{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}/locations/{{ env.CLOUD_ML_REGION }}/publishers/anthropic/models/claude-sonnet-5:rawPredict'
+        method: POST
+        headers:
+          Authorization: 'Bearer {{ env.GOOGLE_VERTEX_AI_TOKEN }}'
+          Content-Type: application/json
+        body:
+          anthropic_version: vertex-2023-10-16
+          max_tokens: *grader_max_tokens
+          messages:
+            - role: user
+              content: '{{ prompt }}'
+        transformResponse: 'json.content[0].text'
     rubricPrompt: file://graders/judge-prompt.txt
   assert:
     - type: cost

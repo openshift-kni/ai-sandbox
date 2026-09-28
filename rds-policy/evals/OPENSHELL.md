@@ -1,101 +1,131 @@
 # Run the eval in OpenShell
 
-This creates a confined OpenShell sandbox, installs the eval dependencies, and
-runs Promptfoo inside the sandbox. The agent and grader use separate Vertex
-models, so the policy allows direct Vertex access instead of using OpenShell's
-single-model inference router.
+One command creates a fresh confined sandbox, uploads the checkout, installs
+the pinned dependencies, runs Promptfoo, downloads the results, and deletes the
+sandbox. Vertex credentials never enter the sandbox: they stay on the gateway
+as an OpenShell provider.
 
 ## Prerequisites
 
-- A running OpenShell gateway and access to its Kubernetes namespace
-- `openshell` and `oc` configured locally
-- Google Cloud Application Default Credentials (ADC) with Vertex access
+- OpenShell CLI and gateway version 0.0.116 or newer
+- A registered gateway (`openshell gateway list`)
+- Google Cloud Application Default Credentials with access to the configured
+  Vertex models
 
-Set the values for your environment:
-
-```sh
-export GW=k8s-poc
-export NS=openshell-poc
-export NAME=eval1
-export GCP_PROJECT=your-project
-export GCP_REGION=global
-```
-
-If the gateway is not already reachable, keep this running in another terminal:
+There is no config file. The scripts read the environment, and the gateway comes
+from the CLI's own `OPENSHELL_GATEWAY`, so your current gateway is used unless
+you override it:
 
 ```sh
-oc port-forward -n "$NS" pod/openshell-0 18090:8080
+export OPENSHELL_GATEWAY=my-gateway   # optional; only if it is not the current one
 ```
 
-## Create and prepare the sandbox
+Four scripts in `scripts/`, one per step, using `openshell` commands with shell
+orchestration. `make openshell-<name>` just runs `scripts/<name>.sh`, so CI can call
+either, and you can copy a command out of one and run it by hand.
 
-Run this from the repository root:
+| Script | What it does |
+| --- | --- |
+| `setup.sh` | one-time per gateway: store your gcloud ADC there as a provider |
+| `run.sh` | the whole run: create, upload, eval, collect, delete |
+| `collect.sh` | download one sandbox's results; for retrying a failed download |
+| `clean.sh` | delete one sandbox |
+
+Each script's header lists the variables it reads.
+
+## One-time: register the Vertex provider
 
 ```sh
-openshell -g "$GW" sandbox create --name "$NAME" --no-tty \
-  --env HOME=/tmp \
-  --env CLAUDE_CODE_USE_VERTEX=1 \
-  --env ANTHROPIC_VERTEX_PROJECT_ID="$GCP_PROJECT" \
-  --env CLOUD_ML_REGION="$GCP_REGION" \
-  --env GOOGLE_APPLICATION_CREDENTIALS=/tmp/adc.json \
-  --env UV_PYTHON_DOWNLOADS=never \
-  --policy rds-policy/evals/openshell-policy.yaml \
-  -- sleep infinity </dev/null &
+make openshell-setup
 ```
 
-Apply the cluster DNS workaround, recreate the pod, and wait for it to become
-ready:
+This stores your local gcloud ADC on the gateway as a `google-vertex-ai`
+provider. A sandbox created with `--provider` sees only a placeholder token in
+`GOOGLE_VERTEX_AI_TOKEN`, plus `ANTHROPIC_VERTEX_PROJECT_ID` and
+`CLOUD_ML_REGION`; the sandbox proxy substitutes the real short-lived token on
+requests to `aiplatform.googleapis.com`. That placeholder is handed to both
+Vertex clients: Claude Code skips its own Google auth
+(`CLAUDE_CODE_SKIP_VERTEX_AUTH=1`) and sends it as its bearer token, and the
+judge switches from Promptfoo's `vertex:` provider, which insists on an ADC
+file, to the plain HTTP client configured in `promptfooconfig.yaml`.
+Both grader clients are configured in that file; `make eval-openshell` selects
+the HTTP client with `PROMPTFOO_GRADING_PROVIDER=https`. No credential file is
+uploaded.
+
+## Run
 
 ```sh
-oc patch sandbox "default--$NAME" -n "$NS" --type=json -p \
-  '[{"op":"add","path":"/spec/podTemplate/spec/dnsConfig","value":{"options":[{"name":"ndots","value":"1"}]}}]'
-oc delete pod "default--$NAME" -n "$NS"
-oc wait --for=condition=Ready pod/"default--$NAME" -n "$NS" --timeout=5m
+export VERTEX_AI_PROJECT_ID=my-gcp-project
+make openshell-setup    # once per gateway
+make openshell-run
 ```
 
-Copy local ADC after recreating the pod because `/tmp` is ephemeral:
+One-test smoke run:
 
 ```sh
-oc cp ~/.config/gcloud/application_default_credentials.json \
-  "$NS/default--$NAME:/tmp/adc.json" -c agent
-oc exec -n "$NS" "default--$NAME" -c agent -- chmod 0644 /tmp/adc.json
+make openshell-run PROMPTFOO_EVAL_ARGS='--filter-first-n 1'
 ```
 
-This ADC copy is the currently verified interim setup. It places a plaintext
-credential in the sandbox; use a dedicated credential and delete the sandbox
-when the run is complete.
+`run.sh` names the sandbox `rds-<MMDD-HHMMSS>` and uses `sandbox create --upload`
+to create it and upload the checkout
+(honoring `.gitignore`, so `node_modules`, `.venv`, and `results/` stay local),
+starts the install-and-eval job, polls until it exits, downloads the results,
+and deletes the sandbox. It exits with the eval's own code. Pass
+`OPENSHELL_SANDBOX` to choose the name, and `OPENSHELL_KEEP=1` to keep the
+sandbox running after the download so you can look around in it; delete it
+with `make openshell-clean` when you are done.
 
-## Run the eval
+Install and eval run as one detached job inside the sandbox, polled with short
+`sandbox exec` calls, because attached exec streams are cut by the OpenShift
+route's idle timeout once they go quiet for about a minute. Promptfoo runs three
+tests at a time (`PROMPTFOO_CONCURRENCY`; the full suite takes about seven
+minutes). If a run reports `policy_denied` with "ambiguous shared socket
+ownership", rerun with `PROMPTFOO_CONCURRENCY=1`: that denial hit the judge's ADC
+token refresh once at concurrency 4 and has not recurred since the credential
+file left the sandbox.
 
-Use `openshell sandbox exec`, not `oc exec`, so the filesystem and network
-policy remains enforced:
+If the download fails, `run.sh` keeps the sandbox and prints the retry. Finish it
+by hand:
 
 ```sh
-openshell -g "$GW" sandbox exec --name "$NAME" --no-tty -- bash -lc '
-  set -eu
-  git clone -q https://github.com/openshift-kni/ai-sandbox /tmp/ai-sandbox
-  cd /tmp/ai-sandbox/rds-policy/evals
-  make setup
-  npx promptfoo eval --no-cache --filter-first-n 1
-' </dev/null
+OPENSHELL_SANDBOX=rds-0918-1400 make openshell-collect
+OPENSHELL_SANDBOX=rds-0918-1400 make openshell-clean
 ```
 
-The final command runs one test as a smoke check. Run the full suite afterward:
+To watch a run started in another shell, or to leave one going overnight:
 
 ```sh
-openshell -g "$GW" sandbox exec --name "$NAME" --no-tty -- \
-  bash -lc 'cd /tmp/ai-sandbox/rds-policy/evals && make eval' </dev/null
+make openshell-run &
+openshell sandbox exec --name rds-0918-1400 --no-tty -- tail -n 30 /sandbox/rds-eval-results/eval.log
 ```
 
-Promptfoo stores results in `/tmp/.promptfoo/promptfoo.db`. OpenShell audit logs
-are available with:
+## Results
+
+Each run lands in `results/<sandbox-name>/`: `promptfoo.json`, `eval.log`,
+`exit-code`, the Promptfoo SQLite state, and any `rds-merge-*` output the agent
+wrote. `results/latest` points to the most recent collected run. Browse it
+with:
 
 ```sh
-openshell -g "$GW" logs "$NAME" --source sandbox -n 400
+make openshell-view
 ```
 
-Delete the credential-bearing sandbox when finished:
+That sets `PROMPTFOO_CONFIG_DIR` to the downloaded state; your local Promptfoo
+database is untouched.
 
-```sh
-openshell -g "$GW" sandbox delete "$NAME"
-```
+## Policy and image
+
+`openshell-policy.yaml` is passed on `sandbox create` by `run.sh`. Gateways provisioned by
+the team's `ooo` installer carry a global policy lock, and then the global
+policy applies instead; `openshell policy get <sandbox>` shows which one is in
+effect. Either way the eval needs egress to Vertex, the npm registry, PyPI, and
+GitHub release assets.
+
+`run.sh` creates the sandbox from the OpenShell community `base` image
+(`--from base`), which already ships uv, Python 3.14, node and git, so the run
+goes straight to `make setup`. Override with `OPENSHELL_IMAGE` if you need the
+gateway's own default (on `ooo`-provisioned gateways that is
+`quay.io/telco5gci/sandbox`, which has Python 3.13 and no uv, and will not work
+without reinstating an install step). Base also exports
+`VIRTUAL_ENV=/sandbox/.venv`; `run.sh` unsets it so `uv sync` uses the project's
+own venv.
