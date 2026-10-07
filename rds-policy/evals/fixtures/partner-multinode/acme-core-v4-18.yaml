@@ -14,7 +14,6 @@ policies:
   policyAnnotations:
     ran.openshift.io/ztp-deploy-wave: "1"
   manifests:
-    # Partner's cluster topology: a SINGLE worker pool with their own name.
     - path: custom-crs/mcp-worker-cnf.yaml
 - name: acme-sub-policy
   policyAnnotations:
@@ -24,3 +23,21 @@ policies:
       patches:
       - spec:
           channel: "stable-4.18"
+- name: acme-perf-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "8"
+  manifests:
+    - path: source-crs/PerformanceProfile.yaml
+      patches:
+      - metadata:
+          name: worker-cnf-profile
+        spec:
+          cpu:
+            reserved: "0-1,32-33"
+            isolated: "2-31,34-63"
+          hugepages:
+            pages:
+            - count: 16
+              size: 1G
+          nodeSelector:
+            node-role.kubernetes.io/worker-cnf: ""

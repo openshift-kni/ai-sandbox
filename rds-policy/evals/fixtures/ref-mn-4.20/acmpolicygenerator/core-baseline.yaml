@@ -13,8 +13,6 @@ policies:
   policyAnnotations:
     ran.openshift.io/ztp-deploy-wave: "1"
   manifests:
-    # Reference EXAMPLE topology: three worker pools (worker-1/2/3).
-    # Only an example — partners bring their own pool structure.
     - path: source-crs/mcp-worker-1.yaml
     - path: source-crs/mcp-worker-2.yaml
     - path: source-crs/mcp-worker-3.yaml
@@ -23,3 +21,50 @@ policies:
     ran.openshift.io/ztp-deploy-wave: "2"
   manifests:
     - path: source-crs/SubscriptionOCP.yaml
+- name: core-perf
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "8"
+  manifests:
+    # MCP PerformanceProfiles
+    - path: source-crs/PerformanceProfile.yaml
+      patches:
+      - metadata:
+          name: worker-profile-1
+        spec:
+          cpu:
+            reserved: "0-1,52-53"
+            isolated: "2-51,54-103"
+          hugepages:
+            pages:
+            - count: 4
+              size: 1G
+          nodeSelector:
+            node-role.kubernetes.io/worker-1: ""
+    - path: source-crs/PerformanceProfile.yaml
+      patches:
+      - metadata:
+          name: worker-profile-2
+        spec:
+          cpu:
+            reserved: "0-3"
+            isolated: "4-63"
+          hugepages:
+            pages:
+            - count: 8
+              size: 1G
+          nodeSelector:
+            node-role.kubernetes.io/worker-2: ""
+    - path: source-crs/PerformanceProfile.yaml
+      patches:
+      - metadata:
+          name: worker-profile-3
+        spec:
+          cpu:
+            reserved: "0-3"
+            isolated: "4-63"
+          hugepages:
+            pages:
+            - count: 8
+              size: 1G
+          nodeSelector:
+            node-role.kubernetes.io/worker-3: ""
