@@ -24,7 +24,7 @@ metadata:
     - url: https://github.com/openshift-kni/ai-sandbox
       title: Source Repository
       icon: github
-# QUESTION(@r2dedios) Q6: do the Tier 1/2 skill checks count toward
+# QUESTION: Do the Tier 1/2 skill checks count toward
 # publishing? SKILL.md fails them today: it's 567 lines (the limit is 500),
 # has no model or color in its frontmatter, and is missing two required
 # sections.
