@@ -1,1 +1,0 @@
-../../hooks/validate-policygen.sh

@@ -1,5 +1,0 @@
-{
-  "name": "rds-policy",
-  "description": "AI-driven Day 2 configuration policy updates for OpenShift RDS version upgrades",
-  "version": "1.0.0"
-}

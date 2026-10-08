@@ -63,24 +63,18 @@ assuming consistency across runs.
 
 ## Quick Start
 
-Install as a plugin (skill + validation hook):
+The skill and validation hook live in the `rh-telco` agentic plugin at
+[`agentic-plugins/rh-telco/`](../agentic-plugins/rh-telco/). For local
+development, load it with `--plugin-dir`:
 
 ```sh
-/plugin marketplace add openshift-kni/ai-sandbox
-/plugin install rds-policy@openshift-kni-ai-sandbox --project  # team-shared
-/plugin install rds-policy@openshift-kni-ai-sandbox --local    # personal only
+claude --plugin-dir /path/to/ai-sandbox/agentic-plugins/rh-telco
 ```
 
 Then prompt:
 
 ```
 upgrade my policies from 4.18 to 4.20
-```
-
-For local development, run from `rds-policy/` or use `--plugin-dir`:
-
-```sh
-claude --plugin-dir /path/to/ai-sandbox/rds-policy
 ```
 
 ### Prerequisites
@@ -115,7 +109,7 @@ Build from this directory:
 
 ```sh
 make build
-# or: podman build -f Containerfile -t rds-policy-skill:latest .
+# or: podman build -f Containerfile -t rds-policy-skill:latest ../agentic-plugins/rh-telco
 ```
 
 ## Docs
