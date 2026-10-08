@@ -36,6 +36,10 @@ metadata:
       title: Source Repository
       icon: github
 spec:
+  # QUESTION(@r2dedios) Q7: we left out AGENTS.md because the plugin has a
+  # single skill, and the skill's description already decides when it
+  # triggers. Do you need one now for the catalog or for Lola
+  # (--append-context), or can we add it once we have a second skill?
   type: plugin
   lifecycle: beta
   # QUESTION(@r2dedios) Q1: should we create our own owner group, or stay
