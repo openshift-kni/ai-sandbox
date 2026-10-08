@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: rh-telco
+  title: Red Hat Telco Agentic Plugin
+  description: >
+    Points to all AI skill catalog entities in the rh-telco plugin.
+  annotations:
+    agentic.redhat.com/lola-module: "true"
+    agentic.redhat.com/lola-module-name: rh-telco
+    agentic.redhat.com/repository: https://github.com/openshift-kni/ai-sandbox
+    agentic.redhat.com/path: agentic-plugins/rh-telco
+spec:
+  targets:
+    - ./rh-telco-plugin.yaml
+    - ./skills/rds-policy-update/catalog-info.yaml

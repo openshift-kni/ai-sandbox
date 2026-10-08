@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: telco-agentic-plugins
+  title: Telco Agentic Plugins
+  description: >
+    Root catalog entry point for the telco agentic plugins in ai-sandbox.
+    Register this file's URL in Compass; it points to the system and to
+    every plugin location below it.
+spec:
+  targets:
+    - ./system.yaml
+    - ./rh-telco/catalog-info.yaml

@@ -3,7 +3,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 
 const workspacePath = path.join(__dirname, 'fixtures');
-const skillSrc = path.join(__dirname, '..', 'skills', 'rds-policy-update');
+const skillSrc = path.join(__dirname, '..', '..', 'agentic-plugins', 'rh-telco', 'skills', 'rds-policy-update');
 const skillDest = path.join(workspacePath, '.claude', 'skills', 'rds-policy-update');
 
 function extensionHook(hookName, context) {

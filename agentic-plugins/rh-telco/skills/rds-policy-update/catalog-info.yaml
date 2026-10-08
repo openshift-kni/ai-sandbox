@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: AiResource
+metadata:
+  name: rds-policy-update
+  namespace: ai5-marketplace
+  title: RDS Policy Update
+  description: >
+    Updates OpenShift RDS Day 2 configuration policies for a version upgrade
+    by merging new reference content with the partner's PolicyGenerator
+    customizations. Covers RAN and Core; explains, merges and validates.
+  labels:
+    distribution: external
+  annotations:
+    backstage.io/source-location: >-
+      url:https://github.com/openshift-kni/ai-sandbox/blob/main/agentic-plugins/rh-telco/skills/rds-policy-update/SKILL.md
+  tags:
+    - ai-skill
+    - telco
+    - openshift
+    - policygenerator
+    - ztp
+    - upgrade
+  links:
+    - url: https://github.com/openshift-kni/ai-sandbox
+      title: Source Repository
+      icon: github
+spec:
+  type: skill
+  lifecycle: beta
+  # TODO: switch to our own group once agreed with AI5.
+  owner: group:redhat/ai5-marketplace
+  disciplines:
+    - telco
+    - devops
+  categories:
+    - configuration-management
+    - upgrades
+  agents: []
+  dependsOn:
+    - airesource:ai5-marketplace/rh-telco

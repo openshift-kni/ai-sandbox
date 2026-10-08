@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: telco-agentic-plugins
+  title: Telco Agentic Plugins
+  description: >
+    Agentic plugins and skills for OpenShift telco reference configurations
+    (RAN and Core), maintained in openshift-kni/ai-sandbox.
+  tags:
+    - ai-skill
+    - agentic
+    - telco
+  annotations:
+    agentic.redhat.com/repository: https://github.com/openshift-kni/ai-sandbox
+    github.com/project-slug: openshift-kni/ai-sandbox
+spec:
+  # TODO: switch to our own group once agreed with AI5.
+  owner: group:redhat/ai5-marketplace
+  dependencyOf:
+    - airesource:ai5-marketplace/rh-telco

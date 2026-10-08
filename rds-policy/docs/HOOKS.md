@@ -93,8 +93,8 @@ The hook silently degrades to a no-op if either tool is missing.
 
 | File | Purpose |
 |------|---------|
-| `.claude/hooks/validate-policygen.sh` | The hook script |
-| `.claude/settings.json` | Wires up the PostToolUse hook |
+| `agentic-plugins/rh-telco/hooks/validate-policygen.sh` | The hook script |
+| `agentic-plugins/rh-telco/hooks/hooks.json` | Wires up the PostToolUse hook |
 
 ## Linting
 
