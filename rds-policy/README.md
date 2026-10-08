@@ -105,11 +105,11 @@ tools:
     paths: ["/skills/rds-policy-update"]
 ```
 
-Build from `agentic-plugins/rh-telco/`:
+Build from this directory:
 
 ```sh
 make build
-# or: podman build -f Containerfile -t rds-policy-skill:latest .
+# or: podman build -f Containerfile -t rds-policy-skill:latest ../agentic-plugins/rh-telco
 ```
 
 ## Docs

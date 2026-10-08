@@ -22,8 +22,10 @@ metadata:
     - openshift
     - policygenerator
   annotations:
-    # QUESTION(@r2dedios) Q8: does Lola install hooks/hooks.json along with
-    # the plugin? What happens on agents that have no hook support?
+    # QUESTION(@r2dedios) Q8: tested with `lola install -a claude-code`: Lola
+    # copies hooks/ into .lola/modules/ but doesn't wire the PostToolUse hook
+    # into the agent, so it never runs. Is there an AI5 pattern for this, or
+    # should we add a lola.yaml post-install script that registers it?
     agentic.redhat.com/lola-module: "true"
     agentic.redhat.com/lola-module-name: rh-telco
     agentic.redhat.com/repository: https://github.com/openshift-kni/ai-sandbox
