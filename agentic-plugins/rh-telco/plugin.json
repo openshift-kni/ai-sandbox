@@ -1,8 +1,0 @@
-{
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "rh-telco",
-  "description": "Skills for telco partners running OpenShift RAN and Core reference configurations.",
-  "repository": "https://github.com/openshift-kni/ai-sandbox",
-  "license": "Apache-2.0",
-  "keywords": ["telco", "openshift", "policygenerator"]
-}
