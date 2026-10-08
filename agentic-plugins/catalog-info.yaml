@@ -7,9 +7,6 @@ metadata:
     Root catalog entry point for the telco agentic plugins in ai-sandbox.
     Register this file's URL in Compass; it points to the system and to
     every plugin location below it.
-# QUESTION(@r2dedios) Q5: AI5's eval tooling (scripts/catalog_tree.py) reads
-# catalog-info.yaml at the repo root, but our root Location is here in
-# agentic-plugins/. Can the eval bundle take this path as the catalog root?
 spec:
   targets:
     - ./system.yaml

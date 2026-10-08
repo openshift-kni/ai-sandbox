@@ -1,20 +1,20 @@
 apiVersion: backstage.io/v1alpha1
 kind: AiResource
 metadata:
-  # QUESTION(@r2dedios) Q3: OK with plugin name rh-telco and system name
-  # telco-agentic-plugins? We want to settle names before registering, since
-  # renaming afterwards leaves orphaned entities in Compass.
+  # QUESTION(@r2dedios) Q3: are you OK with rh-telco for the plugin and
+  # telco-agentic-plugins for the system? We'd like to lock the names before
+  # registering, since renaming later leaves orphaned entities in Compass.
   name: rh-telco
-  # QUESTION(@r2dedios) Q2: should our entities use the ai5-marketplace
-  # namespace, or a namespace of our own?
+  # QUESTION(@r2dedios) Q2: should the plugin and the skill use the
+  # ai5-marketplace namespace, or would you rather we have our own?
   namespace: ai5-marketplace
   title: Red Hat Telco
   description: >
     Skills for telco partners running OpenShift RAN and Core reference
     configurations, starting with Day 2 policy updates between OCP versions.
   labels:
-    # QUESTION(@r2dedios) Q4: is distribution: external the right label while
-    # this is still a POC?
+    # QUESTION(@r2dedios) Q4: is external the right value while this is
+    # still a POC?
     distribution: external
   tags:
     - ai-skill
@@ -22,9 +22,9 @@ metadata:
     - openshift
     - policygenerator
   annotations:
-    # QUESTION(@r2dedios) Q8: tested with `lola install -a claude-code`: Lola
-    # copies hooks/ into .lola/modules/ but doesn't wire the PostToolUse hook
-    # into the agent, so it never runs. Is there an AI5 pattern for this, or
+    # QUESTION(@r2dedios) Q5: I tried `lola install -a claude-code`. Lola
+    # copies hooks/ into .lola/modules/ but never registers the PostToolUse
+    # hook, so it doesn't run. Do you already handle plugin hooks somehow, or
     # should we add a lola.yaml post-install script that registers it?
     agentic.redhat.com/lola-module: "true"
     agentic.redhat.com/lola-module-name: rh-telco
@@ -38,8 +38,9 @@ metadata:
 spec:
   type: plugin
   lifecycle: beta
-  # QUESTION(@r2dedios) Q1: should we create our own owner group, or keep
-  # group:redhat/ai5-marketplace? Applies to system.yaml and the skill too.
+  # QUESTION(@r2dedios) Q1: should we create our own owner group, or stay
+  # under group:redhat/ai5-marketplace? The same answer applies to
+  # system.yaml and the skill.
   owner: group:redhat/ai5-marketplace
   system: default/telco-agentic-plugins
   disciplines:

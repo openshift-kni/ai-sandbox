@@ -1,7 +1,6 @@
 apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
-  # QUESTION(@r2dedios) Q3: see rh-telco/rh-telco-plugin.yaml (names).
   name: telco-agentic-plugins
   title: Telco Agentic Plugins
   description: >
@@ -15,7 +14,6 @@ metadata:
     agentic.redhat.com/repository: https://github.com/openshift-kni/ai-sandbox
     github.com/project-slug: openshift-kni/ai-sandbox
 spec:
-  # QUESTION(@r2dedios) Q1: see rh-telco/rh-telco-plugin.yaml (owner).
   owner: group:redhat/ai5-marketplace
   dependencyOf:
     - airesource:ai5-marketplace/rh-telco
