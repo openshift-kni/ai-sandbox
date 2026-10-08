@@ -1,13 +1,20 @@
 apiVersion: backstage.io/v1alpha1
 kind: AiResource
 metadata:
+  # QUESTION(@r2dedios) Q3: OK with plugin name rh-telco and system name
+  # telco-agentic-plugins? We want to settle names before registering, since
+  # renaming afterwards leaves orphaned entities in Compass.
   name: rh-telco
+  # QUESTION(@r2dedios) Q2: should our entities use the ai5-marketplace
+  # namespace, or a namespace of our own?
   namespace: ai5-marketplace
   title: Red Hat Telco
   description: >
     Skills for telco partners running OpenShift RAN and Core reference
     configurations, starting with Day 2 policy updates between OCP versions.
   labels:
+    # QUESTION(@r2dedios) Q4: is distribution: external the right label while
+    # this is still a POC?
     distribution: external
   tags:
     - ai-skill
@@ -15,6 +22,8 @@ metadata:
     - openshift
     - policygenerator
   annotations:
+    # QUESTION(@r2dedios) Q8: does Lola install hooks/hooks.json along with
+    # the plugin? What happens on agents that have no hook support?
     agentic.redhat.com/lola-module: "true"
     agentic.redhat.com/lola-module-name: rh-telco
     agentic.redhat.com/repository: https://github.com/openshift-kni/ai-sandbox
@@ -27,7 +36,8 @@ metadata:
 spec:
   type: plugin
   lifecycle: beta
-  # TODO: switch to our own group once agreed with AI5.
+  # QUESTION(@r2dedios) Q1: should we create our own owner group, or keep
+  # group:redhat/ai5-marketplace? Applies to system.yaml and the skill too.
   owner: group:redhat/ai5-marketplace
   system: default/telco-agentic-plugins
   disciplines:

@@ -2,6 +2,7 @@ apiVersion: backstage.io/v1alpha1
 kind: AiResource
 metadata:
   name: rds-policy-update
+  # QUESTION(@r2dedios) Q2: see ../../rh-telco-plugin.yaml (namespace).
   namespace: ai5-marketplace
   title: RDS Policy Update
   description: >
@@ -11,6 +12,9 @@ metadata:
   labels:
     distribution: external
   annotations:
+    # QUESTION(@r2dedios) Q6: AI5's push pipeline rewrites blob/main below to
+    # blob/<sha> and commits that straight to main. ai-sandbox only merges
+    # through Prow/tide, so how should that bookkeeping commit work here?
     backstage.io/source-location: >-
       url:https://github.com/openshift-kni/ai-sandbox/blob/main/agentic-plugins/rh-telco/skills/rds-policy-update/SKILL.md
   tags:
@@ -24,10 +28,16 @@ metadata:
     - url: https://github.com/openshift-kni/ai-sandbox
       title: Source Repository
       icon: github
+# QUESTION(@r2dedios) Q7: the skill pulls reference containers from
+# registry.redhat.io (ztp-site-generate, telco-core-rds). Can the eval
+# pipeline do that given its network restrictions? You mentioned you'd confirm.
+# QUESTION(@r2dedios) Q9: do the Tier 1/2 skill checks count toward the
+# publishing criteria? SKILL.md fails them today (567 lines vs 500, no
+# model/color frontmatter, missing required sections).
 spec:
   type: skill
   lifecycle: beta
-  # TODO: switch to our own group once agreed with AI5.
+  # QUESTION(@r2dedios) Q1: see ../../rh-telco-plugin.yaml (owner).
   owner: group:redhat/ai5-marketplace
   disciplines:
     - telco
