@@ -1,12 +1,16 @@
 """Shared utilities for eval assertions — file collection, PG parsing, manifest lookup."""
 
 import json
+import os
 import re
 from pathlib import Path
 
 import yaml
 
 PG_REQUIRED_KEYS = {"metadata", "policyDefaults", "policies"}
+WRITTEN_SUFFIXES = (".yaml", ".yml", ".md")
+# Per-run output dir from SKILL.md: /tmp/rds-merge-{target}-{timestamp}/
+OUTPUT_DIR_RE = re.compile(r"/tmp/rds-merge-[\w.]+-\d{8}-\d{6}")
 
 
 def fmt_check(name, passed, expected, actual):
@@ -17,17 +21,30 @@ def fmt_check(name, passed, expected, actual):
 def collect_written_files(context=None):
     """Read all files the agent wrote, extracted from toolCalls metadata.
 
-    When context is provided, uses Write tool calls to find exact file paths
-    the agent wrote in this session. Falls back to globbing /tmp/rds-merge-*/
-    if context is unavailable or has no Write calls.
+    When context is provided, combines Write/Edit tool-call paths with the
+    files under this session's output dir, so files the agent wrote via Bash
+    (cp, sed -i, heredocs) count too. Output-dir files identical to a fixture
+    input (pristine partner/reference copies) or to an already-collected file
+    are skipped. Falls back to globbing /tmp/rds-merge-*/ if context is
+    unavailable or names neither.
     """
     paths = _paths_from_context(context)
-    if paths:
+    dirs = _output_dirs_from_context(context)
+    if paths or dirs:
         written = {}
         for p in paths:
             f = Path(p)
-            if f.exists() and f.suffix in (".yaml", ".yml", ".md"):
+            if f.exists() and f.suffix in WRITTEN_SUFFIXES:
                 written[str(f)] = f.read_text()
+        seen = set(written.values()) | _fixture_contents()
+        for d in sorted(dirs):
+            for f in sorted(Path(d).rglob("*")):
+                if not f.is_file() or f.suffix not in WRITTEN_SUFFIXES:
+                    continue
+                content = f.read_text()
+                if content not in seen:
+                    seen.add(content)
+                    written[str(f)] = content
         return written
 
     written = {}
@@ -46,13 +63,8 @@ def _paths_from_context(context):
     The agent may use Write for new files or Edit for incremental changes
     (e.g. cp the partner file via Bash, then Edit to apply merge changes).
     """
-    if not context:
-        return []
-    provider_response = context.get("providerResponse") or {}
-    metadata = provider_response.get("metadata") or context.get("metadata") or {}
-    tool_calls = metadata.get("toolCalls") or []
     paths = set()
-    for call in tool_calls:
+    for call in _tool_calls(context):
         if call.get("name") not in ("Write", "Edit"):
             continue
         raw = call.get("input", "")
@@ -64,6 +76,36 @@ def _paths_from_context(context):
         except (json.JSONDecodeError, AttributeError):
             continue
     return list(paths)
+
+
+def _output_dirs_from_context(context):
+    """Output dirs named in tool-call inputs or the agent's final output.
+
+    Tool outputs are not scanned: a listing of /tmp could name stale dirs
+    from earlier runs.
+    """
+    texts = [str(call.get("input", "")) for call in _tool_calls(context)]
+    texts.append(str(((context or {}).get("providerResponse") or {}).get("output", "")))
+    return {d for t in texts for d in OUTPUT_DIR_RE.findall(t)}
+
+
+def _tool_calls(context):
+    if not context:
+        return []
+    provider_response = context.get("providerResponse") or {}
+    metadata = provider_response.get("metadata") or context.get("metadata") or {}
+    return metadata.get("toolCalls") or []
+
+
+def _fixture_contents():
+    """Contents of the fixture inputs the agent copies into its output dir."""
+    default = Path(__file__).resolve().parent.parent / "fixtures"
+    fixtures = Path(os.environ.get("RDS_FIXTURES_DIR") or default)
+    return {
+        f.read_text()
+        for f in fixtures.rglob("*")
+        if f.is_file() and f.suffix in WRITTEN_SUFFIXES
+    }
 
 
 def parse_pg_docs(written, *, strict=False):
