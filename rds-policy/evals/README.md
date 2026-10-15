@@ -1,6 +1,7 @@
 # RDS Policy Agent Skill Evals
 
-3 tests covering EXPLAIN accuracy, end-to-end MERGE, and required CR severity.
+4 tests covering EXPLAIN accuracy, end-to-end MERGE, required CR
+severity, and cluster-topology preservation.
 
 ## Test matrix
 
@@ -9,8 +10,9 @@
 | T1 | EXPLAIN     | exhaustive ref diff coverage (all 9 differences), workflow ordering |
 | T2 | MERGE       | full end-to-end: GVK migration, CR replication, conflict flagging, wave change, mustnothave, redundant overlay, coverage scan, checklist quality, multi-PG structure, version bumps, safety, AskUserQuestion logging |
 | T3 | REQUIRED-CR | missing required vs optional CR severity |
+| T4 | TOPOLOGY    | keeps the partner's MachineConfigPool layout/naming, does not adopt the reference's example pools, does not ask which to use; the partner pool's PerformanceProfile still picks up the reference per-pool change (CNF-23930) |
 
-Skill triggering is implicitly tested by all 3 (each checks `skill-used`).
+Skill triggering is implicitly tested by all 4 (each checks `skill-used`).
 
 ## Assertion strategy
 

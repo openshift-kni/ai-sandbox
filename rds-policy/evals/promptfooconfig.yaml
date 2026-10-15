@@ -650,3 +650,104 @@ tests:
           0.0 if neither flagged or only noted without warning severity.
         threshold: 0.5
         metric: required-cr-severity
+
+  # ============================================================
+  # T4: TOPOLOGY PRESERVATION — keep partner MCP structure/naming
+  #                                                    (CNF-23930)
+  #
+  # Fixtures: ref-mn-4.18/, ref-mn-4.20/ (telco-core-style multinode
+  # reference) and partner-multinode/ (partner with ONE worker pool).
+  #
+  # CR shapes mirror openshift-kni/telco-reference telco-core: concrete
+  # MachineConfigPool files (metadata.name worker-N). The reference
+  # EXAMPLE ships three pools (mcp-worker-1/2/3.yaml → worker-1/2/3);
+  # the partner runs a SINGLE pool with their own name (worker-cnf, via
+  # custom-crs/). The pool layout is the partner's — the agent must
+  # keep the partner's one pool, must NOT expand to the reference's
+  # three-pool example, and must NOT ask which to use (deterministic).
+  #
+  # Each pool must still follow a reference pool configuration. The
+  # reference binds one PerformanceProfile per pool (worker-profile-1/2/3);
+  # the partner binds one to worker-cnf. The real telco-core 4.18→4.20
+  # change (additionalKernelArgs: module_blacklist=irdma) must reach the
+  # partner's worker-cnf profile, which stays bound to worker-cnf. A
+  # Subscription channel bump (4.18→4.20) must also flow through.
+  # ============================================================
+
+  - description: "T4 TOPOLOGY PRESERVATION — keep partner MCP structure/naming"
+    vars:
+      prompt: "upgrade my telco core policies from 4.18 to 4.20. the policy source is partner-multinode/. use the local reference directories ref-mn-4.18/ and ref-mn-4.20/ as the 4.18 and 4.20 references (do not use ref-4.18/ or ref-4.20/). do the full EXPLAIN and MERGE end-to-end, use recommended defaults for any conflicts"
+    assert:
+      - type: skill-used
+        value: rds-policy-update
+        metric: skill-activation
+
+      # Deterministic: partner's single pool preserved (custom-crs path kept)
+      - type: python
+        value: file://assertions/merge.py:check_file_content
+        metric: merge-file-content
+        config:
+          target_version: "4.20"
+          checks:
+            - name: partner_pool_preserved
+              type: exists
+              cr: "custom-crs/mcp-worker-cnf.yaml"
+            - name: subscription_channel_bumped
+              cr: "source-crs/SubscriptionOCP.yaml"
+              path: "patches[].spec.channel"
+              contains: "stable-4.20"
+            # Built from the reference PerformanceProfile (so the 4.20
+            # change reaches it) and still bound to the partner's pool
+            - name: partner_profile_bound_to_partner_pool
+              cr: "source-crs/PerformanceProfile.yaml"
+              path: "patches[].spec.nodeSelector"
+              contains: "node-role.kubernetes.io/worker-cnf"
+
+      # Deterministic: reference example pools (and per-pool CRs bound to
+      # them) must not be added to partner PGs
+      - type: python
+        value: file://assertions/merge.py:check_absent_patterns
+        metric: no-reference-topology
+        config:
+          forbidden_patterns:
+            - "mcp-worker-1"
+            - "mcp-worker-2"
+            - "mcp-worker-3"
+            - "node-role.kubernetes.io/worker-1"
+            - "node-role.kubernetes.io/worker-2"
+            - "node-role.kubernetes.io/worker-3"
+
+      # Semantic: preserved partner layout, didn't ask, aligned the pool's
+      # per-pool config with the reference
+      - type: llm-rubric
+        value: |
+          The partner's policies define a SINGLE MachineConfigPool named
+          worker-cnf (via custom-crs/mcp-worker-cnf.yaml) with one
+          PerformanceProfile bound to it. The 4.20 reference example ships
+          three pools (worker-1/2/3), each with its own PerformanceProfile,
+          and the 4.20 reference PerformanceProfile adds
+          additionalKernelArgs: module_blacklist=irdma. The agent should:
+          1. Keep the partner's single pool (worker-cnf) and NOT expand
+             to the reference's three-pool example topology.
+          2. NOT ask the user which topology to follow — keeping the
+             partner's topology is the correct, deterministic choice.
+          3. Treat the partner's worker-cnf PerformanceProfile as matching
+             the reference per-pool PerformanceProfile and report the
+             module_blacklist=irdma change as applying to it (keeping it
+             bound to worker-cnf) — NOT mark it N/A because the reference
+             binds its profiles to worker-1/2/3.
+          Score 1.0 if all three hold, 0.5 if the partner's topology is
+          preserved but the agent asked which to use or did not carry the
+          PerformanceProfile change to worker-cnf, 0.0 if it adopted the
+          reference topology, dropped the partner's pool, or rebound the
+          partner's profile to a reference pool.
+        threshold: 0.5
+        metric: topology-preservation
+        transform: file://assertions/common.py:enrich_output
+
+      # Deterministic: agent must NOT ask which topology to use
+      - type: python
+        value: file://assertions/workflow.py:no_topology_question
+        metric: no-topology-question
+        config:
+          reference_pools: ["worker-1", "worker-2", "worker-3"]

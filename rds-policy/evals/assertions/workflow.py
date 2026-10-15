@@ -4,11 +4,13 @@ Promptfoo Python assertion return format (GradingResult):
     {"pass_": bool, "score": float 0-1, "reason": str}
     Snake_case keys auto-convert to camelCase.
 
-This assertion extracts and logs — always passes. Review the
+log_user_questions extracts and logs — always passes. Review the
 component_results in the promptfoo UI to see what was asked.
+no_topology_question is a hard gate (CNF-23930).
 """
 
 import json
+import re
 
 
 def _extract_questions(context):
@@ -36,6 +38,56 @@ def _extract_questions(context):
                 }
             )
     return questions
+
+
+# Pool-layout wording: "topology", "pool structure", "three pools",
+# "reference pools". Bare "pool" is too broad (e.g. "connection pool").
+_LAYOUT_TERMS = re.compile(
+    r"\btopolog(?:y|ies)\b"
+    r"|\b(?:pool|mcp|machineconfigpool) (?:structure|layout|count|names?|naming)\b"
+    r"|\b(?:\d+|two|three|four)[- ](?:worker[- ])?(?:pools?|mcps?|machineconfigpools?)\b"
+    r"|\breference(?:'s)? (?:example )?(?:pools|mcps|machineconfigpools)\b"
+)
+# Mapping a partner pool onto a reference pool *configuration* is expected
+# (per-pool CR matching), so naming a reference pool there is not a layout
+# choice.
+_POOL_MAPPING = re.compile(r"\b(?:map\w*|match\w*|correspond\w*|align\w*|equivalent)\b")
+
+
+def _is_topology_question(q, reference_pools):
+    text = " ".join([q["text"] or "", *q["options"]]).lower()
+    if _LAYOUT_TERMS.search(text):
+        return True
+    names_reference_pool = any(
+        re.search(rf"\b{re.escape(p.lower())}\b", text) for p in reference_pools
+    )
+    return names_reference_pool and not _POOL_MAPPING.search((q["text"] or "").lower())
+
+
+def no_topology_question(_output, context):
+    """Fail if the agent asked the user to choose a MachineConfigPool layout.
+
+    Preserving the partner's pool layout is deterministic (CNF-23930), so the
+    agent must NOT ask which layout to use. This is a hard pass/fail gate.
+    Question text and option labels are both scanned. Mentioning only the
+    partner's own pool is not flagged: per-pool config conflicts (e.g. a
+    PerformanceProfile patch on that pool) legitimately name it.
+    """
+    config = context.get("config") or {}
+    reference_pools = config.get("reference_pools", [])
+    questions = _extract_questions(context)
+    asked = [q for q in questions if _is_topology_question(q, reference_pools)]
+    if asked:
+        return {
+            "pass_": False,
+            "score": 0,
+            "reason": f"Agent asked a topology-selection question: {asked[0]['text'][:160]}",
+        }
+    return {
+        "pass_": True,
+        "score": 1.0,
+        "reason": f"No topology-selection question ({len(questions)} AskUserQuestion calls total)",
+    }
 
 
 def log_user_questions(_output, context):
