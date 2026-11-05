@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["opencode-instructions.md"],
+  "provider": {
+    "enmaas": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "EnMaaS",
+      "options": {
+        "baseURL": "https://api.enmaas.devshift.net/v1",
+        "apiKey": "{env:ENMAAS_KEY}"
+      },
+      "models": {
+        "rits/deepseek-ai/DeepSeek-V4.1-Flash-1017": {
+          "name": "DeepSeek V4.1 Flash",
+          "limit": { "context": 1000000, "output": 64000 }
+        },
+        "rits/zai-org/glm-5-3": {
+          "name": "GLM 5.3",
+          "limit": { "context": 1000000, "output": 64000 }
+        }
+      }
+    }
+  }
+}

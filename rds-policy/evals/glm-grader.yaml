@@ -1,0 +1,11 @@
+# llm-rubric judge on EnMaaS-hosted GLM, for runs without Vertex:
+#   npx promptfoo eval --no-cache --grader file://glm-grader.yaml ...
+# Needs ENMAAS_KEY in env.
+id: openai:chat:rits/zai-org/glm-5-3
+config:
+  apiBaseUrl: https://api.enmaas.devshift.net/v1
+  apiKeyEnvar: ENMAAS_KEY
+  max_tokens: 4096
+  # GLM can spend the whole budget on reasoning and return no rubric verdict.
+  passthrough:
+    reasoning_effort: none

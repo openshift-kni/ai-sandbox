@@ -1,0 +1,37 @@
+# OpenCode agent-under-test on an EnMaaS-hosted open model. Replaces only the
+# provider; tests, grader and hooks still come from promptfooconfig.yaml:
+#   npx promptfoo eval --no-cache -r file://opencode-provider.yaml -j 1
+# Needs the `opencode` CLI on PATH and ENMAAS_KEY in env (read by opencode.json).
+# -j 1 because the skill tracks its output dir in a shared /tmp file.
+- id: opencode-provider.js  # no file:// here, or promptfoo inlines the source
+  label: opencode-deepseek
+  env:
+    # Defines the `enmaas` provider; relative to rds-policy/evals.
+    OPENCODE_CONFIG: opencode.json
+    # The agent has unrestricted bash and the eval needs no cluster.
+    KUBECONFIG: /dev/null
+    # Keep ~/.claude/CLAUDE.md out of the eval; .claude/skills still load.
+    OPENCODE_DISABLE_CLAUDE_CODE_PROMPT: '1'
+  config:
+    provider_id: enmaas
+    model: rits/deepseek-ai/DeepSeek-V4.1-Flash-1017
+    working_dir: ./fixtures
+    # working_dir enables read/grep/glob/list; promptfoo denies everything else.
+    tools:
+      bash: true
+      edit: true
+      write: true
+      skill: true
+    # Last matching rule wins, so catch-alls go first.
+    permission:
+      edit: allow
+      bash: allow
+      skill:
+        '*': deny
+        rds-policy-update: allow
+      # The skill writes MERGE output to /tmp/rds-merge-*/ (/private/tmp on macOS).
+      external_directory:
+        '*': deny
+        '/tmp/rds-merge-*': allow
+        '/private/tmp/rds-merge-*': allow
+      doom_loop: deny
