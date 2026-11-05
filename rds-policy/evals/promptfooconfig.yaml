@@ -9,15 +9,9 @@ prompts:
 providers:
   - id: anthropic:claude-agent-sdk
     config:
-      # Agent-under-test: Opus 4.8 on Vertex. CLAUDE_CODE_USE_VERTEX routes the
-      # SDK to Vertex (via ADC + ANTHROPIC_VERTEX_PROJECT_ID / CLOUD_ML_REGION from
-      # env), so the model is not overridden by the inference.local broker.
-      # Override the model-under-test per-run with RDS_AGENT_MODEL.
+      # Agent-under-test. The SDK reads the gateway from ANTHROPIC_BASE_URL and
+      # ANTHROPIC_API_KEY. Override the model-under-test per-run with RDS_AGENT_MODEL.
       model: '{{ env.RDS_AGENT_MODEL | default("claude-opus-4-8", true) }}'
-      env:
-        # Set to 0, with ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY, to use an
-        # Anthropic-compatible gateway instead of Vertex.
-        CLAUDE_CODE_USE_VERTEX: '{{ env.CLAUDE_CODE_USE_VERTEX | default("1", true) }}'
       working_dir: '{{ env.RDS_FIXTURES_DIR | default("./fixtures", true) }}'
       setting_sources: ['project']
       skills: ['rds-policy-update']
@@ -42,35 +36,20 @@ providers:
 extensions:
   - file://hooks.js:extensionHook
 
-# Pin grading provider and judge prompt for stable llm-rubric scoring.
-# Local runs use Vertex's Google authentication. OpenShell selects `https`
-# through PROMPTFOO_GRADING_PROVIDER to use its brokered token instead.
+# Pin grading provider and judge prompt for stable llm-rubric scoring. The judge
+# reaches the agent's gateway through its OpenAI API under /v1. OpenShell swaps
+# in openshell-grader.yaml to use its brokered token instead.
 defaultTest:
   options:
     provider:
-      id: '{{ env.PROMPTFOO_GRADING_PROVIDER | default("vertex:claude-sonnet-5", true) }}'
+      id: 'openai:chat:{{ env.RDS_GRADER_MODEL }}'
       config:
-        # Reuse the agent's Vertex project/region (CLOUD_ML_REGION, e.g. global)
-        # so agent and judge share one region var. `make preflight` fails fast
-        # if either is unset (otherwise these interpolate to empty).
-        projectId: '{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}'
-        region: '{{ env.CLOUD_ML_REGION }}'
-        # Leave room for Claude's thinking plus the rubric response.
-        max_tokens: &grader_max_tokens 4096
-        # HTTP client settings, used only when OpenShell selects `https`.
-        # The sandbox proxy replaces the placeholder token with a real one.
-        url: 'https://aiplatform.googleapis.com/v1/projects/{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}/locations/{{ env.CLOUD_ML_REGION }}/publishers/anthropic/models/claude-sonnet-5:rawPredict'
-        method: POST
-        headers:
-          Authorization: 'Bearer {{ env.GOOGLE_VERTEX_AI_TOKEN }}'
-          Content-Type: application/json
-        body:
-          anthropic_version: vertex-2023-10-16
-          max_tokens: *grader_max_tokens
-          messages:
-            - role: user
-              content: '{{ prompt }}'
-        transformResponse: 'json.content[0].text'
+        apiBaseUrl: '{{ env.ANTHROPIC_BASE_URL }}/v1'
+        apiKeyEnvar: ANTHROPIC_API_KEY
+        max_tokens: 4096
+        # Open models can spend the whole budget on reasoning and return no verdict.
+        passthrough:
+          reasoning_effort: none
     rubricPrompt: file://graders/judge-prompt.txt
   assert:
     - type: cost

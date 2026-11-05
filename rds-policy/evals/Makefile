@@ -1,5 +1,5 @@
-.PHONY: setup preflight eval eval-repeat eval-gateway eval-view lint clean \
-	eval-openshell eval-openshell-recorded package-openshell-results \
+.PHONY: setup preflight eval eval-repeat eval-view lint clean \
+	preflight-openshell eval-openshell eval-openshell-recorded package-openshell-results \
 	openshell-view help
 
 REPO_ROOT := $(abspath ../..)
@@ -15,31 +15,23 @@ setup: ## Install pinned eval dependencies (promptfoo + claude-agent-sdk)
 	npm ci
 	cd ../.. && uv sync
 
-preflight: ## Verify Vertex prerequisites before an eval run
+preflight: ## Verify the gateway URL, key and models are set before an eval run
 	@missing=""; \
-	[ -n "$$ANTHROPIC_VERTEX_PROJECT_ID" ] || missing="$$missing ANTHROPIC_VERTEX_PROJECT_ID"; \
-	[ -n "$$CLOUD_ML_REGION" ] || missing="$$missing CLOUD_ML_REGION"; \
+	for var in ANTHROPIC_BASE_URL ANTHROPIC_API_KEY RDS_AGENT_MODEL RDS_GRADER_MODEL; do \
+	  [ -n "$$(printenv $$var)" ] || missing="$$missing $$var"; \
+	done; \
 	if [ -n "$$missing" ]; then \
-	  echo "preflight: unset Vertex var(s):$$missing" >&2; \
-	  echo "  Agent (Opus 4.8) and the default Sonnet 5 grader both go direct to Vertex; set project + region (e.g. CLOUD_ML_REGION=global) or the grader config interpolates to empty." >&2; \
+	  echo "preflight: unset var(s):$$missing" >&2; \
 	  exit 1; \
-	fi; \
-	adc="$${GOOGLE_APPLICATION_CREDENTIALS:-$$HOME/.config/gcloud/application_default_credentials.json}"; \
-	if [ -z "$$GOOGLE_VERTEX_AI_TOKEN" ] && [ ! -f "$$adc" ]; then \
-	  echo "preflight: warning — no ADC at $$adc (run 'gcloud auth application-default login' or set GOOGLE_APPLICATION_CREDENTIALS)." >&2; \
-	fi; \
-	echo "preflight: Vertex project/region set; the grading project needs claude-sonnet-5 access + Anthropic data sharing, or Vertex returns 403."
+	fi
 
+# The agent has unrestricted bash and the eval needs no cluster, so KUBECONFIG
+# is emptied.
 eval: preflight ## Run all evals (single pass)
-	npx promptfoo eval --no-cache
+	KUBECONFIG=/dev/null npx promptfoo eval --no-cache $(PROMPTFOO_EVAL_ARGS)
 
 eval-repeat: preflight ## Run all evals 3x to measure variance
-	npx promptfoo eval --no-cache --repeat 3
-
-# URL, key and models come from the environment (see README). The agent has
-# unrestricted bash and the eval needs no cluster, so KUBECONFIG is emptied.
-eval-gateway: ## Run all evals through an Anthropic-compatible gateway, not Vertex
-	CLAUDE_CODE_USE_VERTEX=0 KUBECONFIG=/dev/null npx promptfoo eval --no-cache --max-concurrency 1 --grader file://gateway-grader.yaml $(PROMPTFOO_EVAL_ARGS)
+	KUBECONFIG=/dev/null npx promptfoo eval --no-cache --repeat 3 $(PROMPTFOO_EVAL_ARGS)
 
 eval-view: ## View eval results in browser
 	npx promptfoo view
@@ -56,14 +48,29 @@ clean: ## Clear eval cache
 # The attached provider injects a placeholder in GOOGLE_VERTEX_AI_TOKEN and the
 # sandbox proxy swaps in the real short-lived credential on requests to Vertex.
 # Claude Code sends it as its bearer token (Google auth skipped via
-# CLAUDE_CODE_SKIP_VERTEX_AUTH, set at create); the judge switches to the HTTP
-# client in promptfooconfig.yaml, which does the same.
+# CLAUDE_CODE_SKIP_VERTEX_AUTH, set at create); the judge's HTTP client in
+# openshell-grader.yaml does the same.
 # Drop PROMPTFOO_CONCURRENCY to 1 if a run reports policy_denied with
 # "ambiguous shared socket ownership" (seen once, on the old ADC refresh path).
-eval-openshell: preflight
+eval-openshell: preflight-openshell
 	mkdir -p "$(SANDBOX_RESULTS_DIR)"
-	ANTHROPIC_AUTH_TOKEN="$$GOOGLE_VERTEX_AI_TOKEN" PROMPTFOO_GRADING_PROVIDER=https PROMPTFOO_DISABLE_TELEMETRY=1 \
-		npx promptfoo eval --no-cache --max-concurrency $(PROMPTFOO_CONCURRENCY) --output "$(SANDBOX_RESULTS_DIR)/promptfoo.json" $(PROMPTFOO_EVAL_ARGS)
+	ANTHROPIC_AUTH_TOKEN="$$GOOGLE_VERTEX_AI_TOKEN" PROMPTFOO_DISABLE_TELEMETRY=1 \
+		npx promptfoo eval --no-cache --max-concurrency $(PROMPTFOO_CONCURRENCY) --grader file://openshell-grader.yaml --output "$(SANDBOX_RESULTS_DIR)/promptfoo.json" $(PROMPTFOO_EVAL_ARGS)
+
+preflight-openshell:
+	@missing=""; \
+	[ -n "$$ANTHROPIC_VERTEX_PROJECT_ID" ] || missing="$$missing ANTHROPIC_VERTEX_PROJECT_ID"; \
+	[ -n "$$CLOUD_ML_REGION" ] || missing="$$missing CLOUD_ML_REGION"; \
+	if [ -n "$$missing" ]; then \
+	  echo "preflight: unset Vertex var(s):$$missing" >&2; \
+	  echo "  Agent (Opus 4.8) and the Sonnet 5 grader both go direct to Vertex; set project + region (e.g. CLOUD_ML_REGION=global) or the grader config interpolates to empty." >&2; \
+	  exit 1; \
+	fi; \
+	adc="$${GOOGLE_APPLICATION_CREDENTIALS:-$$HOME/.config/gcloud/application_default_credentials.json}"; \
+	if [ -z "$$GOOGLE_VERTEX_AI_TOKEN" ] && [ ! -f "$$adc" ]; then \
+	  echo "preflight: warning — no ADC at $$adc (run 'gcloud auth application-default login' or set GOOGLE_APPLICATION_CREDENTIALS)." >&2; \
+	fi; \
+	echo "preflight: Vertex project/region set; the grading project needs claude-sonnet-5 access + Anthropic data sharing, or Vertex returns 403."
 
 # Detached job: install, run, record the exit code for run.sh to poll.
 eval-openshell-recorded:

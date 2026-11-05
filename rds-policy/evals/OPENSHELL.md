@@ -46,11 +46,8 @@ provider. A sandbox created with `--provider` sees only a placeholder token in
 requests to `aiplatform.googleapis.com`. That placeholder is handed to both
 Vertex clients: Claude Code skips its own Google auth
 (`CLAUDE_CODE_SKIP_VERTEX_AUTH=1`) and sends it as its bearer token, and the
-judge switches from Promptfoo's `vertex:` provider, which insists on an ADC
-file, to the plain HTTP client configured in `promptfooconfig.yaml`.
-Both grader clients are configured in that file; `make eval-openshell` selects
-the HTTP client with `PROMPTFOO_GRADING_PROVIDER=https`. No credential file is
-uploaded.
+judge uses the plain HTTP client in `openshell-grader.yaml`, because Promptfoo's
+`vertex:` provider insists on an ADC file. No credential file is uploaded.
 
 ## Run
 
