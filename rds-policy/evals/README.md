@@ -40,4 +40,13 @@ before tests and cleans up after.
 Results are stored in `~/.promptfoo/promptfoo.db` (not committed).
 Run `make eval-view` to browse results in the browser.
 
+To run on another model, point the agent and judge at an Anthropic-compatible
+gateway that also serves the OpenAI API under `/v1`:
+
+```bash
+export ANTHROPIC_BASE_URL=<gateway url> ANTHROPIC_API_KEY=<key>
+export RDS_AGENT_MODEL=<agent model> RDS_GRADER_MODEL=<judge model>
+make eval-gateway
+```
+
 To run the eval inside a confined OpenShell sandbox, see [OPENSHELL.md](OPENSHELL.md).

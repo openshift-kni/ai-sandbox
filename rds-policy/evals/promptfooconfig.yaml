@@ -15,7 +15,9 @@ providers:
       # Override the model-under-test per-run with RDS_AGENT_MODEL.
       model: '{{ env.RDS_AGENT_MODEL | default("claude-opus-4-8", true) }}'
       env:
-        CLAUDE_CODE_USE_VERTEX: "1"
+        # Set to 0, with ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY, to use an
+        # Anthropic-compatible gateway instead of Vertex.
+        CLAUDE_CODE_USE_VERTEX: '{{ env.CLAUDE_CODE_USE_VERTEX | default("1", true) }}'
       working_dir: '{{ env.RDS_FIXTURES_DIR | default("./fixtures", true) }}'
       setting_sources: ['project']
       skills: ['rds-policy-update']

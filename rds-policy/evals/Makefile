@@ -1,4 +1,4 @@
-.PHONY: setup preflight eval eval-repeat eval-view lint clean \
+.PHONY: setup preflight eval eval-repeat eval-gateway eval-view lint clean \
 	eval-openshell eval-openshell-recorded package-openshell-results \
 	openshell-view help
 
@@ -35,6 +35,11 @@ eval: preflight ## Run all evals (single pass)
 
 eval-repeat: preflight ## Run all evals 3x to measure variance
 	npx promptfoo eval --no-cache --repeat 3
+
+# URL, key and models come from the environment (see README). The agent has
+# unrestricted bash and the eval needs no cluster, so KUBECONFIG is emptied.
+eval-gateway: ## Run all evals through an Anthropic-compatible gateway, not Vertex
+	CLAUDE_CODE_USE_VERTEX=0 KUBECONFIG=/dev/null npx promptfoo eval --no-cache --max-concurrency 1 --grader file://gateway-grader.yaml $(PROMPTFOO_EVAL_ARGS)
 
 eval-view: ## View eval results in browser
 	npx promptfoo view
