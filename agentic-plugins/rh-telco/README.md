@@ -1,22 +1,44 @@
 # Red Hat Telco agentic plugin
 
 Skills for telco partners running the OpenShift RAN and Core reference
-configurations. For now that's one skill, `rds-policy-update`, which updates
-your Day 2 PolicyGenerator policies when you move to a new OCP version, say
-4.18 to 4.20.
+configurations. Both reference types are handled with the same skill,
+`rds-policy-update`, which updates your Day 2 PolicyGenerator policies when
+you move to a new OCP version, say 4.18 to 4.20.
 
 **Persona**: Telco partner platform engineer (OpenShift RAN or Core)
 **Marketplaces**: Lola, Claude Code
 
-Review everything it produces before you apply it, and keep in mind that
-your policy files go to whichever LLM you've configured. See the
+**AI-generated output requires expert human review.** This skill relies
+on a large language model (LLM) to produce its results. LLMs can and do
+make mistakes — including reasonable-looking output that is subtly wrong.
+You **must** review all generated output (policies and other artifacts)
+for correctness, completeness, accuracy, and suitability before applying
+them to your environment. Do not deploy AI-generated configuration
+without thorough expert human review.
+
+**Data handling and privacy.** Any input provided to the skill —
+including policy files, configuration data, cluster details, and Git
+repository content — may be sent to the LLM for processing.
+
+See the full
 [disclaimer](https://github.com/openshift-kni/ai-sandbox/blob/main/rds-policy/README.md#important-security-privacy-and-disclaimer).
 
 ## Getting Started
 
-You need `podman` (or `oc`) logged in to `registry.redhat.io`, and your
-policies as a Git repo or a local copy. If your Git host uses internal
-certificates, add them to the trust store first.
+The skill runs under Claude Code, the only environment we've tested so far.
+You can install it with Lola or as a Claude Code plugin. The plugin adds a
+validation hook that runs `kustomize build` on each PolicyGenerator file as
+it's written, so the agent can fix errors right away. See
+[HOOKS.md](https://github.com/openshift-kni/ai-sandbox/blob/main/rds-policy/docs/HOOKS.md).
+
+The environment where the skill runs needs:
+
+- `podman` with access to `registry.redhat.io`
+- Read access to your policies, either:
+  - a local copy
+  - an authenticated Git repo with valid certificates (if your Git host uses
+    internal certificates, add them to the trust store first)
+- For the validation hook: `kustomize`, the PolicyGenerator plugin, and `jq`
 
 Install with Lola, from your project:
 
@@ -25,8 +47,7 @@ lola market add rh-agentic-collections https://raw.githubusercontent.com/RHEcosy
 lola install rh-telco -a claude-code
 ```
 
-If you use Claude Code, you can install it as a plugin instead, which also
-gets you the validation hook:
+Or install it as a Claude Code plugin:
 
 ```bash
 claude plugin marketplace add 'RHEcosystemAppEng/agentic-catalog#rc/v1.0.0'
@@ -46,12 +67,6 @@ files stay untouched. The results land in
 `/tmp/rds-merge-<target>-<timestamp>/`, along with a `checklist.md` showing
 what happened to each CR. Review them and push them through your usual
 process.
-
-With the Claude Code plugin, a hook also runs `kustomize build` on each
-PolicyGenerator file as it's written, so the agent can fix errors right
-away. It needs
-`kustomize` and the PolicyGenerator plugin; see
-[HOOKS.md](https://github.com/openshift-kni/ai-sandbox/blob/main/rds-policy/docs/HOOKS.md).
 
 ## Development
 
