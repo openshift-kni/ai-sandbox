@@ -37,8 +37,7 @@ extensions:
   - file://hooks.js:extensionHook
 
 # Pin grading provider and judge prompt for stable llm-rubric scoring. The judge
-# reaches the agent's gateway through its OpenAI API under /v1. OpenShell swaps
-# in openshell-grader.yaml to use its brokered token instead.
+# reaches the agent's gateway through its OpenAI API under /v1.
 defaultTest:
   options:
     provider:

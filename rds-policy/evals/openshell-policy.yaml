@@ -1,9 +1,7 @@
-# The agent (Opus 4.8) and the grader (Sonnet 5) need different models, so both
-# call Vertex directly instead of using OpenShell's single-model router. The
-# attached google-vertex-ai provider supplies the credential: the sandbox only
-# holds a placeholder token and the proxy substitutes the real one on the way
-# out. Gateways with a global policy lock apply their own policy instead of
-# this file (`openshell policy get <sandbox>` shows which is in effect).
+# The agent and the grader both call the model gateway, whose host run.sh fills
+# in from ANTHROPIC_BASE_URL. Gateways with a global policy lock apply their own
+# policy instead of this file (`openshell policy get <sandbox>` shows which is
+# in effect).
 version: 1
 
 filesystem_policy:
@@ -24,10 +22,10 @@ landlock:
   compatibility: best_effort
 
 network_policies:
-  vertex:
-    name: vertex-direct-inference
+  model-gateway:
+    name: model-gateway
     endpoints:
-      - host: aiplatform.googleapis.com
+      - host: GATEWAY_HOST
         port: 443
         enforcement: enforce
     binaries:
