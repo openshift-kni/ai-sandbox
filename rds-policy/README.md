@@ -63,34 +63,14 @@ assuming consistency across runs.
 
 ## Quick Start
 
-The skill and validation hook live in the `rh-telco` agentic plugin at
-[`agentic-plugins/rh-telco/`](../agentic-plugins/rh-telco/). For local
-development, load it with `--plugin-dir`:
+The skill and hook ship in the `rh-telco` plugin. To install it, see the
+[plugin README](../agentic-plugins/rh-telco/README.md#getting-started).
+
+To test local changes, load the plugin from this checkout:
 
 ```sh
 claude --plugin-dir /path/to/ai-sandbox/agentic-plugins/rh-telco
 ```
-
-Then prompt:
-
-```
-upgrade my policies from 4.18 to 4.20
-```
-
-### Prerequisites
-
-- **TLS certificates** — all root and self-signed certificates required
-  to reach internal Git hosts must be present in the execution
-  environment's trust store before running the skill.
-
-#### Optional (for validation hook)
-
-- `kustomize` (v4.5+)
-- [PolicyGenerator plugin](https://github.com/open-cluster-management-io/policy-generator-plugin)
-  binary at `~/.config/kustomize/plugin/policy.open-cluster-management.io/v1/policygenerator/PolicyGenerator`
-
-Without these, the skill works normally but the validation hook is a
-no-op.
 
 ## Skill image
 

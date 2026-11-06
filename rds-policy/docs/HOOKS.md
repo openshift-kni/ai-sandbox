@@ -96,6 +96,9 @@ The hook silently degrades to a no-op if either tool is missing.
 | `agentic-plugins/rh-telco/hooks/validate-policygen.sh` | The hook script |
 | `agentic-plugins/rh-telco/hooks/hooks.json` | Wires up the PostToolUse hook |
 
+The hook runs in Claude Code, whether you install the plugin from the
+catalog or load it with `--plugin-dir`. Lola installs only the skill.
+
 ## Linting
 
 The hook script is checked by `shellcheck` as part of `make lint` from the
