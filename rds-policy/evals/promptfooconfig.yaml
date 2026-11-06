@@ -470,6 +470,7 @@ tests:
           0.5 if mentioned without cleanup suggestion, 0.0 if not flagged.
         threshold: 0.5
         metric: redundant-overlay
+        transform: file://assertions/common.py:enrich_output
       # Does it report which reference CRs the partner doesn't use?
       - type: llm-rubric
         value: |
