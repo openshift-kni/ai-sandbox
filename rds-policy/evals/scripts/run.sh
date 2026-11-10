@@ -52,7 +52,8 @@ openshell sandbox exec --name "$name" --no-tty --workdir "$workdir" \
 }
 
 # Poll until it finishes. An occasional empty answer is a gateway blip, so allow
-# a few misses rather than treating one bad answer as a dead eval.
+# a few misses rather than treating one bad answer as a dead eval. An empty
+# exit-code (still being written, or a full disk) counts as a miss too.
 # shellcheck disable=SC2016
 check='d=/sandbox/rds-eval-results; if [ -f "$d/exit-code" ]; then echo "finished:$(cat "$d/exit-code")"; elif [ -f "$d/pid" ] && kill -0 "$(cat "$d/pid")" 2>/dev/null; then echo running; else echo missing; fi'
 status=
@@ -65,7 +66,7 @@ while [ -z "$status" ]; do
       printf '.'
       sleep 15
       ;;
-    finished:*)
+    finished:?*)
       status=${state#finished:}
       printf '\nEval finished with exit %s\n' "$status"
       ;;
