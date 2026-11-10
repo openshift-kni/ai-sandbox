@@ -14,8 +14,10 @@ filesystem_policy:
     - /sbin
     - /etc
     - /proc
+  # /sandbox is HOME in the base image and holds the results run.sh collects.
   read_write:
     - /tmp
+    - /sandbox
     - /dev
 
 landlock:
@@ -29,8 +31,9 @@ network_policies:
         port: 443
         enforcement: enforce
     binaries:
-      # Claude Code ships inside the pinned agent SDK; Promptfoo runs under node.
-      - path: /tmp/**/node_modules/@anthropic-ai/claude-agent-sdk-linux-x64/claude
+      # Claude Code ships inside the pinned agent SDK, one package per
+      # platform; Promptfoo runs under node.
+      - path: /tmp/**/node_modules/@anthropic-ai/claude-agent-sdk-linux-*/claude
       - path: /usr/bin/node
 
   npm:
@@ -42,8 +45,7 @@ network_policies:
     binaries:
       - path: /usr/bin/node
 
-  # `setup-openshell` pip-installs uv with the image's python3, then uv pulls
-  # the project's dependencies.
+  # `make setup` runs `uv sync` with the uv the base image ships.
   pypi:
     name: python-packages
     endpoints:
@@ -55,7 +57,7 @@ network_policies:
         enforcement: enforce
     binaries:
       - path: /usr/bin/python3*
-      - path: /tmp/.local/bin/uv
+      - path: /usr/local/bin/uv
 
   # `uv python install` fetches CPython from GitHub release assets.
   github:
@@ -73,4 +75,4 @@ network_policies:
     binaries:
       - path: /usr/bin/git
       - path: /usr/lib/git-core/**
-      - path: /tmp/.local/bin/uv
+      - path: /usr/local/bin/uv
