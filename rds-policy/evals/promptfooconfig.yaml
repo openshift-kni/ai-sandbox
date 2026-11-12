@@ -206,7 +206,7 @@ tests:
   #   1. Activation + safety       skill loaded, no unsafe kubectl apply
   #   2. Artifact checks           expected files written, PG structure valid
   #   3. Deterministic file checks config-driven YAML content verification
-  #   4. Version sweep             no source version remaining in output
+  #   4. Version sweep             no unflagged source version left in output
   #   5. YAML nesting validation   data/spec not nested under metadata
   #   6. Semantic rubric checks    LLM judge scores communication quality
   #   7. Logging                   AskUserQuestion call recording
@@ -332,7 +332,9 @@ tests:
               cr: "ImageBasedUpgrade"
 
       # ----- 4. Version sweep (CNF-23295) -----
-      # No source version (4.18) should remain in the output PG files.
+      # No source version (4.18) should remain in the output PG files
+      # unless checklist.md or the final output flags it for review (the
+      # skill keeps version-pinned values such as the IBU seedImageRef).
       # Catches missed version bumps in metadata, namespaces, channels,
       # labels, annotations, and arbitrary fields.
       - type: python
