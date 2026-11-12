@@ -682,9 +682,14 @@ tests:
         config:
           target_version: "4.20"
           checks:
+            # The channel after patches: dropping the partner's stable-4.18
+            # patch, which only restated the old default, also passes,
+            # since the 4.20 base CR has stable-4.20
             - name: subscription_channel_bumped
+              type: effective
               cr: "source-crs/SubscriptionOCP.yaml"
-              path: "patches[].spec.channel"
+              field: "spec.channel"
+              reference: "ref-mn-4.20"
               contains: "stable-4.20"
             # Built from the reference PerformanceProfile (so the 4.20
             # change reaches it) and still bound to the partner's pool

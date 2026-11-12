@@ -13,7 +13,9 @@ Communication checks (conflict flagging, overlay lifecycle, checklist
 quality) are handled by llm-rubric in promptfooconfig.yaml.
 """
 
+import os
 import re
+from pathlib import Path
 
 import jmespath
 import yaml
@@ -26,12 +28,72 @@ from common import (
     parse_pg_docs,
 )
 
+EVALS_DIR = Path(__file__).resolve().parent.parent
 
-def _run_check(check, all_manifests, manifest_paths):
+
+def _fixtures_dir():
+    """The agent's working dir, as promptfooconfig.yaml sets it."""
+    return EVALS_DIR / (os.environ.get("RDS_FIXTURES_DIR") or "fixtures")
+
+
+def _check_effective(check, written):
+    """Check a field's value after PolicyGenerator applies the manifest's patches.
+
+    A patch that sets the field wins (the last one, as patches merge in
+    order). With no such patch the value comes from the base CR: the copy
+    next to the PolicyGenerator file if the agent wrote one, else the copy
+    in the target reference (``reference``, a dir under the fixtures dir),
+    which stands in for the target version's source-crs. So an agent that
+    drops a patch that only restated the old default still passes when the
+    target base CR carries the new value. Every manifest matching ``cr``
+    must contain the expected value.
+    """
+    name, cr, field = check["name"], check["cr"], check["field"]
+    expected = check["contains"]
+    reference = _fixtures_dir() / check["reference"]
+    results = []
+    for fp, content in written.items():
+        pg_docs, _ = parse_pg_docs({fp: content})
+        for m in collect_manifests(pg_docs):
+            path = m.get("path", "")
+            if cr.lower() not in path.lower():
+                continue
+            values = [
+                v
+                for p in m.get("patches") or []
+                if isinstance(p, dict) and (v := jmespath.search(field, p)) is not None
+            ]
+            if values:
+                results.append((values[-1], f"patch in {Path(fp).name}"))
+                continue
+            base = next(
+                (b for b in (Path(fp).parent / path, reference / path) if b.is_file()),
+                None,
+            )
+            if base is None:
+                results.append((None, f"no base CR for {path}"))
+                continue
+            try:
+                value = jmespath.search(field, yaml.safe_load(base.read_text()) or {})
+            except yaml.YAMLError:
+                value = None
+            results.append((value, f"base CR {base}"))
+
+    passed = bool(results) and all(expected in str(v or "") for v, _ in results)
+    actual = (
+        "; ".join(f"{v!r} from {src}" for v, src in results) or f"no manifest '{cr}'"
+    )
+    return (name, passed, f"effective {field} contains '{expected}'", actual)
+
+
+def _run_check(check, all_manifests, manifest_paths, written):
     """Run a single config-driven check. Returns (name, passed, expected, actual)."""
     name = check["name"]
     cr = check["cr"]
     check_type = check.get("type")
+
+    if check_type == "effective":
+        return _check_effective(check, written)
 
     if check_type == "exists":
         found = find_first(all_manifests, cr) is not None
@@ -299,7 +361,9 @@ def check_file_content(_output, context):
     all_manifests = collect_manifests(pg_docs)
     manifest_paths = [m.get("path", "") for m in all_manifests]
 
-    checks = [_run_check(c, all_manifests, manifest_paths) for c in config["checks"]]
+    checks = [
+        _run_check(c, all_manifests, manifest_paths, written) for c in config["checks"]
+    ]
 
     total = len(checks)
     num_passed = sum(1 for _, passed, _, _ in checks if passed)
