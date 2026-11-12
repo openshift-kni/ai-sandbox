@@ -739,12 +739,18 @@ tests:
              not override additionalKernelArgs, so inheriting the change
              from the updated 4.20 base CR counts as applying it; it does
              not need to be added to the patch.
-          4. Warn that worker-1's real-time profile matches none of the
-             reference pool configurations (a deviation for the partner
-             to review), while keeping it unchanged and NOT adding another
-             PerformanceProfile for worker-1. Merely listing it as
-             preserved custom content, without calling out the mismatch,
-             does not count.
+          4. Tell the partner that worker-1's real-time profile deviates
+             from the reference, while keeping it unchanged and NOT adding
+             another PerformanceProfile for worker-1. Any statement of how
+             this profile differs from what the reference provides meets
+             this criterion fully, whatever the wording. For example: it
+             matches no reference pool or profile; it is real-time where
+             the reference profiles are not; or it is a standalone, forked
+             or custom copy of the reference profile, so it does not get
+             reference changes such as module_blacklist=irdma. It is NOT
+             met if the agent only lists the file as preserved, unchanged
+             or custom content without saying how it differs from the
+             reference.
           Score 1.0 if all four hold, 0.5 if the partner's topology is
           preserved but the agent asked which to use, did not carry the
           PerformanceProfile change to worker-cnf, or did not warn about
