@@ -3,7 +3,7 @@
 # download the results, delete the sandbox. Exits with the eval's own code.
 #
 # export ANTHROPIC_BASE_URL=<model gateway url> ANTHROPIC_API_KEY=<key>
-# export RDS_AGENT_MODEL=<agent model> RDS_GRADER_MODEL=<judge model>
+# export RDS_AGENT_MODEL=<agent model>
 # export OPENSHELL_GATEWAY=<gateway>   # the openshell CLI reads this itself
 # Set OPENSHELL_SANDBOX to name the sandbox, otherwise rds-<MMDD-HHMMSS>.
 # Set PROMPTFOO_EVAL_ARGS='--filter-first-n 1' for a one-test smoke run.
@@ -36,7 +36,7 @@ openshell sandbox create --name "$name" --from "$image" \
   --upload "$repo:/tmp" \
   --policy "$policy" \
   --env "ANTHROPIC_BASE_URL=$ANTHROPIC_BASE_URL" --env "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" \
-  --env "RDS_AGENT_MODEL=$RDS_AGENT_MODEL" --env "RDS_GRADER_MODEL=$RDS_GRADER_MODEL" \
+  --env "RDS_AGENT_MODEL=$RDS_AGENT_MODEL" \
   --env SANDBOX_RESULTS_DIR=/sandbox/rds-eval-results \
   --no-tty --detach
 

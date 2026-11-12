@@ -15,9 +15,9 @@ setup: ## Install pinned eval dependencies (promptfoo + claude-agent-sdk)
 	npm ci
 	cd ../.. && uv sync
 
-preflight: ## Verify the gateway URL, key and models are set before an eval run
+preflight: ## Verify the gateway URL, key and agent model are set before an eval run
 	@missing=""; \
-	for var in ANTHROPIC_BASE_URL ANTHROPIC_API_KEY RDS_AGENT_MODEL RDS_GRADER_MODEL; do \
+	for var in ANTHROPIC_BASE_URL ANTHROPIC_API_KEY RDS_AGENT_MODEL; do \
 	  [ -n "$$(printenv $$var)" ] || missing="$$missing $$var"; \
 	done; \
 	if [ -n "$$missing" ]; then \

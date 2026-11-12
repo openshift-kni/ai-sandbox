@@ -10,8 +10,8 @@ send it.
 
 - OpenShell CLI and gateway version 0.0.116 or newer
 - A registered gateway (`openshell gateway list`)
-- An Anthropic-compatible model gateway on HTTPS port 443 that also serves the
-  OpenAI API under `/v1`
+- An Anthropic-compatible model gateway on HTTPS port 443 that serves the agent
+  model and `claude-sonnet-5`, the judge
 
 There is no config file. The scripts read the environment, and the gateway comes
 from the CLI's own `OPENSHELL_GATEWAY`, so your current gateway is used unless
@@ -37,7 +37,7 @@ Each script's header lists the variables it reads.
 
 ```sh
 export ANTHROPIC_BASE_URL=<model gateway url> ANTHROPIC_API_KEY=<key>
-export RDS_AGENT_MODEL=<agent model> RDS_GRADER_MODEL=<judge model>
+export RDS_AGENT_MODEL=<agent model>
 make openshell-run
 ```
 
