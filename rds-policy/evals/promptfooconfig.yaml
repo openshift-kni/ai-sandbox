@@ -445,6 +445,7 @@ tests:
           with removal context, 0.0 if not mentioned.
         threshold: 0.5
         metric: mustnothave-warning
+        transform: file://assertions/common.py:enrich_output
       # Does it handle the Tuned restructure AND preserve partner sections? (A5/B6/B8)
       - type: llm-rubric
         value: |
