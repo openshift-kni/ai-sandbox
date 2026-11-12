@@ -9,13 +9,9 @@ prompts:
 providers:
   - id: anthropic:claude-agent-sdk
     config:
-      # Agent-under-test: Opus 4.8 on Vertex. CLAUDE_CODE_USE_VERTEX routes the
-      # SDK to Vertex (via ADC + ANTHROPIC_VERTEX_PROJECT_ID / CLOUD_ML_REGION from
-      # env), so the model is not overridden by the inference.local broker.
-      # Override the model-under-test per-run with RDS_AGENT_MODEL.
+      # Agent-under-test. The SDK reads the gateway from ANTHROPIC_BASE_URL and
+      # ANTHROPIC_API_KEY. Override the model-under-test per-run with RDS_AGENT_MODEL.
       model: '{{ env.RDS_AGENT_MODEL | default("claude-opus-4-8", true) }}'
-      env:
-        CLAUDE_CODE_USE_VERTEX: "1"
       working_dir: '{{ env.RDS_FIXTURES_DIR | default("./fixtures", true) }}'
       setting_sources: ['project']
       skills: ['rds-policy-update']
@@ -40,35 +36,16 @@ providers:
 extensions:
   - file://hooks.js:extensionHook
 
-# Pin grading provider and judge prompt for stable llm-rubric scoring.
-# Local runs use Vertex's Google authentication. OpenShell selects `https`
-# through PROMPTFOO_GRADING_PROVIDER to use its brokered token instead.
+# Pin grading provider and judge prompt for stable llm-rubric scoring. Every
+# model is judged by Sonnet 5, on the same gateway (ANTHROPIC_BASE_URL and
+# ANTHROPIC_API_KEY).
 defaultTest:
   options:
     provider:
-      id: '{{ env.PROMPTFOO_GRADING_PROVIDER | default("vertex:claude-sonnet-5", true) }}'
+      id: 'anthropic:messages:claude-sonnet-5'
       config:
-        # Reuse the agent's Vertex project/region (CLOUD_ML_REGION, e.g. global)
-        # so agent and judge share one region var. `make preflight` fails fast
-        # if either is unset (otherwise these interpolate to empty).
-        projectId: '{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}'
-        region: '{{ env.CLOUD_ML_REGION }}'
         # Leave room for Claude's thinking plus the rubric response.
-        max_tokens: &grader_max_tokens 4096
-        # HTTP client settings, used only when OpenShell selects `https`.
-        # The sandbox proxy replaces the placeholder token with a real one.
-        url: 'https://aiplatform.googleapis.com/v1/projects/{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}/locations/{{ env.CLOUD_ML_REGION }}/publishers/anthropic/models/claude-sonnet-5:rawPredict'
-        method: POST
-        headers:
-          Authorization: 'Bearer {{ env.GOOGLE_VERTEX_AI_TOKEN }}'
-          Content-Type: application/json
-        body:
-          anthropic_version: vertex-2023-10-16
-          max_tokens: *grader_max_tokens
-          messages:
-            - role: user
-              content: '{{ prompt }}'
-        transformResponse: 'json.content[0].text'
+        max_tokens: 4096
     rubricPrompt: file://graders/judge-prompt.txt
   assert:
     - type: cost
@@ -490,6 +467,7 @@ tests:
           0.5 if mentioned without cleanup suggestion, 0.0 if not flagged.
         threshold: 0.5
         metric: redundant-overlay
+        transform: file://assertions/common.py:enrich_output
       # Does it report which reference CRs the partner doesn't use?
       - type: llm-rubric
         value: |

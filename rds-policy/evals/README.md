@@ -40,4 +40,14 @@ before tests and cleans up after.
 Results are stored in `~/.promptfoo/promptfoo.db` (not committed).
 Run `make eval-view` to browse results in the browser.
 
+The agent and the judge run through an Anthropic-compatible gateway. Its URL and
+key, and the agent model, come from the environment. The judge is always Sonnet 5
+(`claude-sonnet-5`), so the gateway must serve it:
+
+```bash
+export ANTHROPIC_BASE_URL=<gateway url> ANTHROPIC_API_KEY=<key>
+export RDS_AGENT_MODEL=<agent model>
+make eval
+```
+
 To run the eval inside a confined OpenShell sandbox, see [OPENSHELL.md](OPENSHELL.md).
