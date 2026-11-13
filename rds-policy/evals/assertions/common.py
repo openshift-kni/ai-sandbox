@@ -14,15 +14,16 @@ def fmt_check(name, passed, expected, actual):
     return f"{status} {name} | EXPECTED: {expected} | ACTUAL: {actual}"
 
 
-def collect_written_files(context=None):
+def collect_written_files(context=None, *, glob_fallback=True):
     """Read all files the agent wrote, extracted from toolCalls metadata.
 
     When context is provided, uses Write tool calls to find exact file paths
     the agent wrote in this session. Falls back to globbing /tmp/rds-merge-*/
-    if context is unavailable or has no Write calls.
+    if context is unavailable or has no Write calls, unless glob_fallback is
+    False. The glob also picks up other runs' dirs.
     """
     paths = _paths_from_context(context)
-    if paths:
+    if paths or not glob_fallback:
         written = {}
         for p in paths:
             f = Path(p)
@@ -134,9 +135,11 @@ def enrich_output(output, context):
     Called by promptfoo before llm-rubric evaluation. Extracts Write/Edit
     tool calls from context.metadata.toolCalls via collect_written_files(),
     filters to .md files, and appends their contents so the rubric judge
-    can score the actual analysis — not just the chat summary.
+    can score the actual analysis — not just the chat summary. Only this
+    run's files: a run that wrote none, like one blocked before EXPLAIN,
+    must not get credit from another run's explain.md.
     """
-    written = collect_written_files(context)
+    written = collect_written_files(context, glob_fallback=False)
     md_files = {p: c for p, c in written.items() if p.endswith(".md")}
     if not md_files:
         return output
