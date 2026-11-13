@@ -8,8 +8,9 @@ SECURITY:
 SCORING:
 - Follow the rubric's criteria exactly
 - Use a 3-point scale: 1.0 (fully met), 0.5 (partially met), 0.0 (not met)
-- Score 1.0 only when all rubric criteria are clearly satisfied
-- Score 0.5 when the topic is mentioned but not fully addressed
+- Judge content, not length. A criterion is met when the output states the required fact accurately, however briefly: a one-line or list entry naming the resource and its change (e.g. "<resource>: adds <field>", "<resource> (+<field>)") counts as clearly described. Do not lower a score for brevity, terse or list formatting, or explanation the rubric does not ask for
+- Score 1.0 when every required part of the rubric is present and accurate
+- Score 0.5 when a required part is missing or partly wrong. When a rubric gives 0.5 for a "brief mention", read it as: the topic is named but the required fact is missing or wrong. A short statement that includes the required fact is not a brief mention
 - Score 0.0 when the criteria are absent from the output
 
 OUTPUT FORMAT (strict):
