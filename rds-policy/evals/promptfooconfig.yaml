@@ -88,6 +88,8 @@ tests:
         value: rds-policy-update
         metric: skill-activation
       # --- Semantic: does the explanation cover each ref difference? ---
+      # The agent's chat reply may only summarize explain.md, so each rubric
+      # also sees the .md files it wrote (enrich_output).
       - type: llm-rubric
         value: |
           The output mentions the TunedPerformancePatch changes between
@@ -95,6 +97,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-tuned
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions the GVK migration from ICSP to IDMS
@@ -103,6 +106,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-gvk
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions that ConsoleOperatorDisable changed and
@@ -113,6 +117,7 @@ tests:
           mentioned but not connected, 0.0 if either is absent.
         threshold: 0.5
         metric: explain-console
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions that NMStateOperator was removed from the
@@ -121,6 +126,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-nmstate
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions PTP scheduling changes — new ptpSchedulingPolicy
@@ -131,6 +137,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-ptp
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions the StorageLV changes: wave changed from 2 to 10,
@@ -138,6 +145,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-storagelv
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions the SubscriptionOCP channel change from
@@ -145,6 +153,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-subscription
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions the SriovFecClusterConfig change — a priority
@@ -152,6 +161,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-sriovfec
+        transform: file://assertions/common.py:enrich_output
       # --- Workflow: EXPLAIN must come before asking for merge inputs ---
       - type: llm-rubric
         value: |
@@ -162,6 +172,7 @@ tests:
           the reference changes, score 0.0. If EXPLAIN came first, score 1.0.
         threshold: 1.0
         metric: workflow
+        transform: file://assertions/common.py:enrich_output
 
   # ============================================================
   # T2: COMPREHENSIVE MERGE — all merge behaviors + safety
