@@ -26,21 +26,36 @@ Average of the 3 runs, with each run's score in brackets.
 
 | Test | Opus 4.8 | DeepSeek V4.1 Flash | GLM 5.3 |
 | --- | --- | --- | --- |
-| Explain | running | 50% (100, 25, 25) | 33% (25, 50, 25) |
-| Merge | running | 98% (100, 97, 96) | 64% (0, 98, 95) |
-| Required CR severity | running | 100% (100, 100, 100) | 92% (100, 100, 75) |
-| Topology preservation | running | 91% (100, 86, 86) | 83% (86, 67, 95) |
-| Overall | running | 85% | 68% |
-| Runs at 90% or more | running | 8 of 12 | 5 of 12 |
+| Explain | 50% (25, 100, 25) | 50% (100, 25, 25) | 33% (25, 50, 25) |
+| Merge | 99% (100, 97, 100) | 98% (100, 97, 96) | 64% (0, 98, 95) |
+| Required CR severity | 100% (100, 100, 100) | 100% (100, 100, 100) | 92% (100, 100, 75) |
+| Topology preservation | 95% (86, 100, 100) | 91% (100, 86, 86) | 83% (86, 67, 95) |
+| Overall | 86% | 85% | 68% |
+| Runs at 90% or more | 9 of 12 | 8 of 12 | 5 of 12 |
 
 | | Opus 4.8 | DeepSeek V4.1 Flash | GLM 5.3 |
 | --- | --- | --- | --- |
-| Wall time, 12 runs | running | 14 min | 25 min |
-| Median Merge run | running | 4.6 min | 11.2 min |
-| Agent tokens | running | 12.1M | 8.7M |
-| Judge tokens | running | 0.53M | 0.34M |
+| Wall time, 12 runs | 17 min | 14 min | 25 min |
+| Median Merge run | 7.2 min | 4.6 min | 11.2 min |
+| Agent tokens | 10.7M | 12.1M | 8.7M |
+| Judge tokens | 0.35M | 0.53M | 0.34M |
+| Agent cost at list price | $15 | not known | not known |
+
+Claude Code doesn't know the open models' prices, so it can't report their
+cost.
 
 ## What went wrong, run by run
+
+### Opus 4.8
+
+- Explain: one run was perfect. The other two stopped to ask for a registry
+  login.
+- Merge: one run was perfect. The other two kept the NMState operator CR, which
+  the 4.20 reference drops, and kept pinned 4.18 values. One of them also dropped
+  the `group.ice-ptp` entry from the partner's Tuned scheduler patch and didn't
+  flag the catalog tag.
+- Required CR severity: all three runs were perfect.
+- Topology: two runs were perfect. One got half credit on the worker-1 warning.
 
 ### DeepSeek V4.1 Flash
 
@@ -69,6 +84,15 @@ Average of the 3 runs, with each run's score in brackets.
   `module_blacklist=irdma`, which the skill says not to do. Another got half
   credit on the worker-1 warning. Two runs also failed the channel check, which
   only looks at patches (see below).
+
+## Overall
+
+Opus and DeepSeek finish within two points of each other, and the gap is
+smaller than the run-to-run spread. Opus is a little ahead on Topology, where
+it gave the full worker-1 warning in two runs out of three against DeepSeek's
+one. DeepSeek is a little faster, and Opus is the only model that kept the
+NMState CR the Merge check expects to be removed. Both lose half of Explain to
+the registry login. GLM trails on every test and takes the longest.
 
 ## DeepSeek vs GLM
 
@@ -115,8 +139,9 @@ The judge is inconsistent on one point: Sonnet gives the worker-1 warning 1.0
 in some runs and 0.5 in others for the same "standalone fork" wording.
 
 The real misses are the missing `kustomization.yaml`, the unflagged catalog tag,
-the missed monitoring CR, and GLM's dropped Tuned entry, its change to the
-partner profile and its turn limit.
+the dropped Tuned entry (Opus and GLM once each), the kept NMState CR (Opus
+twice), DeepSeek's missed monitoring CR, and GLM's change to the partner profile
+and its turn limit.
 
 Fixes for the check and judge issues are in progress and aren't part of these
 runs.
@@ -128,6 +153,10 @@ A test's score is the weighted average of its checks, and it passes at 0.9
 that should fail a test on their own carry more weight: `safety` (5) in Merge
 and `topology-preservation` (2) in Topology. `cost` and `latency` lower the
 score but can't fail a test by themselves.
+
+Merge scores sit close to 100% even when a run gets something wrong. Most of
+its checks give partial credit, so a missed file check might score 16/17 and
+cost the run less than a point. Read the failures, not just the percentage.
 
 ## Reproduce
 
