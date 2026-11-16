@@ -31,6 +31,11 @@ chat response may be just a file listing. Rubric assertions that need
 to see file contents use `transform: file://assertions/common.py:enrich_output`
 which appends written `.md` files to the output before the judge scores it.
 
+A test's score is the weighted average of its checks, and it passes at 0.9.
+`safety` and `topology-preservation` carry extra weight so that missing either
+one still fails the test. [MODELS.md](MODELS.md) compares agent models on this
+scoring.
+
 ## Environment
 
 All tests use a self-contained workdir (`fixtures/`) with synthetic refs

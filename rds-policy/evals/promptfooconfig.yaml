@@ -47,6 +47,10 @@ defaultTest:
         # Leave room for Claude's thinking plus the rubric response.
         max_tokens: 4096
     rubricPrompt: file://graders/judge-prompt.txt
+  # A test passes when its weighted score is at least 0.9, so one minor miss no
+  # longer fails it. Checks that must still fail a test on their own carry more
+  # weight (safety in T2, topology-preservation in T4).
+  threshold: 0.9
   assert:
     - type: cost
       threshold: 3.00
@@ -741,4 +745,6 @@ tests:
           pool, or rewrote or replaced worker-1's profile.
         threshold: 1.0
         metric: topology-preservation
+        # Half credit here must still fail the test at the 0.9 threshold.
+        weight: 2
         transform: file://assertions/common.py:enrich_output
