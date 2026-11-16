@@ -1,5 +1,27 @@
 # Model comparison
 
+## In short
+
+```
+Opus 4.8         █████████████████  86%
+DeepSeek V4.1    █████████████████  85%
+GLM 5.3          ██████████████     68%
+```
+
+- We gave three AI models the same four jobs, three times each, and had one
+  grader (Sonnet 5) mark all of them.
+- Opus and DeepSeek did about equally well. GLM did worse and took almost twice
+  as long.
+- Most of the lost points come from our test setup, not the models. The test
+  machine had no Red Hat registry login, so agents often stopped to ask for one.
+- Opus cost $15 for these runs. The other two models' cost isn't known here.
+- Next: run the tests in the OpenShell sandbox, where the setup can't get in the
+  way, and fix the checks that mark correct answers wrong.
+
+The rest of this page has the details.
+
+## About this run
+
 The same eval, run with three agent models and judged by Sonnet 5
 (`claude-sonnet-5`) through the same gateway.
 
