@@ -46,6 +46,10 @@ defaultTest:
       config:
         # Leave room for Claude's thinking plus the rubric response.
         max_tokens: 4096
+    # promptfoo passes an llm-rubric check only if the judge's "pass" is true
+    # AND score >= the check's threshold. The judge sets pass for any score
+    # above 0, so every llm-rubric needs an explicit threshold. This decides
+    # each check's pass mark; a test's pass comes from its weighted score.
     rubricPrompt: file://graders/judge-prompt.txt
   # A test passes when its weighted score is at least 0.9, so one minor miss no
   # longer fails it. Checks that must still fail a test on their own carry more

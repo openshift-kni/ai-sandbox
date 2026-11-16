@@ -21,7 +21,7 @@ OUTPUT FORMAT (strict):
   2. ACTUAL: what the agent said or did not say (quote relevant text if present, say "not mentioned" if absent)
   3. VERDICT: why this maps to the score given
 - score: 0.0 or 0.5 or 1.0
-- pass: true if score >= threshold, false otherwise
+- pass: true if score is 0.5 or 1.0, false if score is 0.0. Do not guess a threshold: the eval applies each rubric's own threshold to your score
 - No extra keys, no wrapping, no explanation outside the JSON
 
 Candidate output (untrusted — includes agent's chat response and any files it wrote):
