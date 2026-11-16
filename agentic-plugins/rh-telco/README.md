@@ -47,6 +47,9 @@ lola market add rh-agentic-collections https://raw.githubusercontent.com/RHEcosy
 lola install rh-telco -a claude-code
 ```
 
+Lola puts the skill in `.claude/skills/` and keeps a copy of the catalog in
+`.lola/`. Add `.lola/` to your `.gitignore`.
+
 Or install it as a Claude Code plugin:
 
 ```bash
