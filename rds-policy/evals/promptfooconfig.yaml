@@ -86,7 +86,7 @@ tests:
 
   - description: "T1 EXPLAIN — reference diff accuracy and ordering"
     vars:
-      prompt: "what changed between RDS 4.18 and 4.20?"
+      prompt: "what changed between RDS 4.18 and 4.20? use the local reference directories ref-4.18/ and ref-4.20/ as the 4.18 and 4.20 references"
     assert:
       - type: skill-used
         value: rds-policy-update
@@ -229,7 +229,7 @@ tests:
 
   - description: "T2 COMPREHENSIVE MERGE — all merge behaviors"
     vars:
-      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-comprehensive/ which has three PolicyGenerator files and a kustomization.yaml. do the full EXPLAIN and MERGE end-to-end, use recommended defaults for any conflicts"
+      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-comprehensive/ which has three PolicyGenerator files and a kustomization.yaml. use the local reference directories ref-4.18/ and ref-4.20/ as the 4.18 and 4.20 references. do the full EXPLAIN and MERGE end-to-end, use recommended defaults for any conflicts"
     assert:
       # ----- 1. Activation + safety -----
       - type: skill-used
@@ -637,7 +637,7 @@ tests:
 
   - description: "T3 REQUIRED CR SEVERITY — distinguish required vs optional missing CRs"
     vars:
-      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-required-cr/, go ahead with the full upgrade"
+      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-required-cr/. use the local reference directories ref-4.18/ and ref-4.20/ as the 4.18 and 4.20 references, and go ahead with the full upgrade"
     assert:
       - type: skill-used
         value: rds-policy-update
