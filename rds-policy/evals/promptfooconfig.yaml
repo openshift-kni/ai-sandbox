@@ -350,6 +350,7 @@ tests:
       # No source version (4.18) should remain in the output PG files
       # unless checklist.md or the final output flags it for review (the
       # skill keeps version-pinned values such as the IBU seedImageRef).
+      # target-ocp-version must be updated even when flagged.
       # Catches missed version bumps in metadata, namespaces, channels,
       # labels, annotations, and arbitrary fields.
       - type: python

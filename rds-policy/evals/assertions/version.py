@@ -15,6 +15,10 @@ REVIEW_MARKER = re.compile(r"⚠|\[~\]|\[!\]|\breview\b", re.IGNORECASE)
 # A markdown item starts with a bullet, a numbered entry, a table row or a
 # heading. Following non-blank lines are its continuation.
 ITEM_START = re.compile(r"\s*(?:[-*+]\s|\d+[.)]\s|\||#)")
+# The skill says to update values that clearly track the OCP version, and
+# names annotations among them, so a kept target-ocp-version is a missed
+# bump even when it is flagged.
+MUST_UPDATE = re.compile(r"target-ocp-version")
 
 
 def _markdown_items(text):
@@ -50,11 +54,12 @@ def check_semver_sweep(output, context):
 
     Scans all written PG YAML files for the source OCP version (e.g. "4.18").
     Matches both dotted (4.18) and hyphenated (4-18) forms. The skill keeps
-    version-pinned values (e.g. an IBU seedImageRef or a z-stream
-    target-ocp-version) and flags them for review instead of guessing a
-    target value, so a remaining value passes when checklist.md or the final
-    output flags it: an item with a review marker (⚠, REVIEW, [~] or [!])
-    that names the exact value (e.g. 4.18.13). Any other remaining
+    values it is unsure about (e.g. an IBU seedImageRef) and flags them for
+    review instead of guessing a target value, so a remaining value passes
+    when checklist.md or the final output flags it: an item with a review
+    marker (⚠, REVIEW, [~] or [!]) that names the exact value (e.g. 4.18.6).
+    A target-ocp-version annotation clearly tracks the OCP version, so it
+    must be updated and flagging it does not count. Any other remaining
     occurrence is a missed version bump.
     """
     config = context.get("config") or {}
@@ -93,7 +98,7 @@ def check_semver_sweep(output, context):
     value_pattern = re.compile(rf"[\w.-]*{major}[._-]{minor}(?!\d)[\w.-]*")
     flag_items = _flag_items(output, written)
 
-    flagged, unflagged = [], []
+    flagged, missed = [], []
     for filepath, content in written.items():
         if filepath.endswith(".md"):
             continue
@@ -108,26 +113,27 @@ def check_semver_sweep(output, context):
             tokens = {
                 m.group().strip("._-") for m in value_pattern.finditer(value_part)
             }
-            if tokens and all(_is_flagged(t, flag_items) for t in tokens):
+            if MUST_UPDATE.search(value_part):
+                missed.append(f"not updated: {hit}")
+            elif tokens and all(_is_flagged(t, flag_items) for t in tokens):
                 flagged.append(hit)
             else:
-                unflagged.append(hit)
+                missed.append(f"unflagged: {hit}")
 
     component_results = [
-        {"pass_": False, "score": 0, "reason": f"unflagged: {h}"}
-        for h in unflagged[:10]
+        {"pass_": False, "score": 0, "reason": h} for h in missed[:10]
     ] + [
         {"pass_": True, "score": 1.0, "reason": f"flagged for review: {h}"}
         for h in flagged[:10]
     ]
 
-    if unflagged:
+    if missed:
         return {
             "pass_": False,
-            "score": max(0, 1 - len(unflagged) / 10),
+            "score": max(0, 1 - len(missed) / 10),
             "reason": (
-                f"Source version {source_version} found in {len(unflagged)} lines "
-                f"not flagged for review ({len(flagged)} flagged)"
+                f"Source version {source_version} left in {len(missed)} lines "
+                f"that needed a bump or a review flag ({len(flagged)} flagged)"
             ),
             "component_results": component_results,
         }
