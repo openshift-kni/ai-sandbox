@@ -86,6 +86,44 @@ def _check_effective(check, written):
     return (name, passed, f"effective {field} contains '{expected}'", actual)
 
 
+def _check_unchanged(check, written):
+    """A partner file the agent must leave alone still matches the original.
+
+    ``cr`` is the file's path inside the partner source dir ``source``
+    (under the fixtures dir). Every copy in the run's output is compared
+    as parsed YAML: copies the agent wrote, plus copies in each
+    rds-merge-* dir it wrote to, which catches a cp followed by sed. No
+    copy at all passes here; the ``exists`` check covers a missing file.
+    """
+    name, rel = check["name"], check["cr"]
+    original = _fixtures_dir() / check["source"] / rel
+
+    def load(p):
+        try:
+            return list(yaml.safe_load_all(Path(p).read_text()))
+        except (OSError, yaml.YAMLError) as e:
+            return f"unreadable: {e}"
+
+    want = load(original)
+    roots = {
+        Path(*Path(p).parts[: i + 1])
+        for p in written
+        for i, part in enumerate(Path(p).parts)
+        if part.startswith("rds-merge-")
+    }
+    copies = {Path(p) for p in written if p.endswith("/" + rel)}
+    copies |= {c for r in roots if r.is_dir() for c in r.rglob(Path(rel).name)
+               if str(c).endswith("/" + rel)}
+    changed = sorted(str(c) for c in copies if load(c) != want)
+    return (
+        name,
+        not changed,
+        f"{rel} unchanged from {check['source']}/",
+        f"changed: {', '.join(changed)}" if changed
+        else f"{len(copies)} copies unchanged",
+    )
+
+
 def _run_check(check, all_manifests, manifest_paths, written):
     """Run a single config-driven check. Returns (name, passed, expected, actual)."""
     name = check["name"]
@@ -94,6 +132,9 @@ def _run_check(check, all_manifests, manifest_paths, written):
 
     if check_type == "effective":
         return _check_effective(check, written)
+
+    if check_type == "unchanged":
+        return _check_unchanged(check, written)
 
     if check_type == "exists":
         found = find_first(all_manifests, cr) is not None

@@ -53,7 +53,8 @@ defaultTest:
     rubricPrompt: file://graders/judge-prompt.txt
   # A test passes when its weighted score is at least 0.9, so one minor miss no
   # longer fails it. Checks that must still fail a test on their own carry more
-  # weight (safety in T2, topology-preservation in T4).
+  # weight (safety in T2; topology-preservation and partner-profile-unchanged
+  # in T4).
   threshold: 0.9
   assert:
     - type: cost
@@ -717,6 +718,21 @@ tests:
             - name: deviating_profile_kept
               type: exists
               cr: "custom-crs/PerformanceProfile-rt.yaml"
+
+      # Deterministic: worker-1's real-time profile is the partner's own, so
+      # the agent flags it and leaves it alone, even when it asked and got
+      # "add it" back. Weighted so that editing it fails the test whatever
+      # the judge scores topology-preservation.
+      - type: python
+        value: file://assertions/merge.py:check_file_content
+        metric: partner-profile-unchanged
+        weight: 2
+        config:
+          checks:
+            - name: deviating_profile_unchanged
+              type: unchanged
+              cr: "custom-crs/PerformanceProfile-rt.yaml"
+              source: "partner-multinode"
 
       # Deterministic: output keeps exactly the partner's pools (from
       # partner-multinode/acme-core-v4-18.yaml) -- none dropped, no
