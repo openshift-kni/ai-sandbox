@@ -29,6 +29,9 @@ network_policies:
     endpoints:
       - host: GATEWAY_HOST
         port: 443
+        # L7, so the proxy can swap the provider's placeholder for the key.
+        protocol: rest
+        access: full
         enforcement: enforce
     binaries:
       # Claude Code ships inside the pinned agent SDK, one package per

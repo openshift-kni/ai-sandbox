@@ -1,0 +1,27 @@
+# OpenShell provider profile for the model gateway. scripts/setup.sh fills in
+# GATEWAY_HOST from ANTHROPIC_BASE_URL and stores the key on the OpenShell
+# gateway. A sandbox with this provider gets a placeholder ANTHROPIC_API_KEY,
+# and OpenShell's proxy puts the real key in the x-api-key header on requests
+# to the model gateway, so the agent never sees it.
+id: rds-model-gateway
+display_name: RDS model gateway
+description: Anthropic-compatible model gateway for the rds-policy eval
+category: inference
+credentials:
+  - name: api_key
+    description: Model gateway API key, sent as x-api-key
+    env_vars:
+      - ANTHROPIC_API_KEY
+    required: true
+    auth_style: header
+    header_name: x-api-key
+endpoints:
+  - host: GATEWAY_HOST
+    port: 443
+    protocol: rest
+    access: read-write
+    enforcement: enforce
+binaries:
+  - /tmp/**/node_modules/@anthropic-ai/claude-agent-sdk-linux-*/claude
+  - /usr/bin/node
+inference_capable: true

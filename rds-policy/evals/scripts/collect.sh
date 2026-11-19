@@ -9,7 +9,7 @@ name=${OPENSHELL_SANDBOX:?set it to the sandbox name}
 evals=$(cd "$(dirname "$0")/.." && pwd)
 workdir=/tmp/$(basename "$(cd "$evals/../.." && pwd)")/rds-policy/evals
 
-openshell sandbox exec --name "$name" --no-tty --workdir "$workdir" -- make package-openshell-results
+openshell sandbox exec --name "$name" --no-tty --workdir "$workdir" -- make package-openshell-results </dev/null
 
 mkdir -p "$evals/results/$name"
 openshell sandbox download "$name" /sandbox/rds-eval-results "$evals/results/$name"

@@ -2,9 +2,9 @@
 
 One command creates a fresh confined sandbox, uploads the checkout, installs
 the pinned dependencies, runs Promptfoo, downloads the results, and deletes the
-sandbox. The model gateway's URL and key are passed in as environment variables,
-so the agent can read the key. The sandbox's egress policy limits where it can
-send it.
+sandbox. The model gateway key stays on the OpenShell gateway as a provider. The
+sandbox gets a placeholder in `ANTHROPIC_API_KEY`, and OpenShell's proxy swaps in
+the real key on requests to the model gateway, so the agent never sees it.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ send it.
 - An Anthropic-compatible model gateway on HTTPS port 443 that serves the agent
   model and `claude-sonnet-5`, the judge
 
-There is no config file. The scripts read the environment, and the gateway comes
+There is no config file to edit. The scripts read the environment, and the gateway comes
 from the CLI's own `OPENSHELL_GATEWAY`, so your current gateway is used unless
 you override it:
 
@@ -21,23 +21,37 @@ you override it:
 export OPENSHELL_GATEWAY=my-gateway   # optional; only if it is not the current one
 ```
 
-Three scripts in `scripts/`, one per step, using `openshell` commands with shell
+Four scripts in `scripts/`, one per step, using `openshell` commands with shell
 orchestration. `make openshell-<name>` just runs `scripts/<name>.sh`, so CI can call
 either, and you can copy a command out of one and run it by hand.
 
 | Script | What it does |
 | --- | --- |
+| `setup.sh` | store the model gateway key as a provider, once per gateway |
 | `run.sh` | the whole run: create, upload, eval, collect, delete |
 | `collect.sh` | download one sandbox's results; for retrying a failed download |
 | `clean.sh` | delete one sandbox |
 
 Each script's header lists the variables it reads.
 
-## Run
+## Set up the key
+
+Once per gateway, and again when the key or URL changes:
 
 ```sh
 export ANTHROPIC_BASE_URL=<model gateway url> ANTHROPIC_API_KEY=<key>
-export RDS_AGENT_MODEL=<agent model>
+make openshell-setup
+```
+
+`setup.sh` imports `openshell-provider.yaml` as a provider profile for the model
+gateway host and creates the `rds-model-gateway` provider from
+`ANTHROPIC_API_KEY`. The CLI reads the key from the environment, so it is not
+on the command line. After this, `run.sh` doesn't need the key.
+
+## Run
+
+```sh
+export ANTHROPIC_BASE_URL=<model gateway url> RDS_AGENT_MODEL=<agent model>
 make openshell-run
 ```
 
@@ -100,6 +114,11 @@ the team's `ooo` installer carry a global policy lock, and then the global
 policy applies instead; `openshell policy get <sandbox>` shows which one is in
 effect. Either way the eval needs egress to the model gateway, the npm registry,
 PyPI, and GitHub release assets.
+
+The rule for the model gateway must be L7 (`protocol: rest`), or OpenShell
+can't add the key and refuses to create the sandbox. Endpoints from the provider
+profile are not added to a global policy, so on a locked gateway the global
+policy itself must list the model gateway host with `protocol: rest`.
 
 `run.sh` creates the sandbox from the OpenShell community `base` image
 (`--from base`), which already ships uv, Python 3.14, node and git, so the run

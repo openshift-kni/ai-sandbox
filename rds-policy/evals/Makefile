@@ -45,7 +45,8 @@ clean: ## Clear eval cache
 
 # ---- Targets below run inside the sandbox (started by `scripts/run.sh`) ----
 
-# run.sh sets the gateway URL, key and models at create.
+# run.sh sets the gateway URL and agent model at create, and attaches the
+# provider that holds the key (the sandbox sees only a placeholder).
 # Drop PROMPTFOO_CONCURRENCY to 1 if a run reports policy_denied with
 # "ambiguous shared socket ownership".
 eval-openshell: preflight
@@ -78,4 +79,4 @@ openshell-view: ## View downloaded results with the preserved Promptfoo database
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-28s\033[0m %s\n", $$1, $$2}'
-	@printf '\033[36m%-28s\033[0m %s\n' 'openshell-<script>' 'Run scripts/<script>.sh: run, collect, clean'
+	@printf '\033[36m%-28s\033[0m %s\n' 'openshell-<script>' 'Run scripts/<script>.sh: setup, run, collect, clean'

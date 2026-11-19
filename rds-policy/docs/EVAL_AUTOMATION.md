@@ -25,8 +25,8 @@ OpenShell adds three things:
 
 - **Sandboxing** — the agent runs with confined egress.
 - **Audit** — the agent's tool calls and commands are logged.
-- **Credential management** — the gateway URL and key are passed into the
-  sandbox. The agent can read the key, so confined egress is what contains it.
+- **Credential management** — OpenShell holds the model gateway key and adds
+  it to requests on the way out, so the agent never handles the raw secret.
 
 `promptfooconfig.yaml` bounds each test with `max_turns` and `max_budget_usd`,
 and `PROMPTFOO_EVAL_TIMEOUT_MS` adds a per-test wall-clock timeout. These limit
@@ -34,8 +34,8 @@ one test, not the run as a whole, so the infra also bounds the job (see the
 CronJob below).
 
 We supply our own model gateway URL and key, since we cannot mount another
-team's. We pass them into the sandbox, so the infra only needs somewhere to
-store them. The handoff is the same on any platform.
+team's. We hand the key to OpenShell to manage, so the infra only needs
+somewhere to store it. The handoff is the same on any platform.
 
 ### The infra: where the container runs
 
@@ -105,7 +105,7 @@ per-test score, cost, latency, model IDs, git SHA). It is small and holds no
 transcripts or agent output, so we commit it to the repo. Git is the durable
 record: diffable, reviewable, and independent of the cluster. Each run appends
 one summary and pushes it, using a repo write token that OpenShell holds and
-brokers. A small static page can render the
+brokers just like the model gateway key. A small static page can render the
 committed history as a trend.
 
 As an option, we can self-host promptfoo's own server (a Docker image with a
