@@ -33,7 +33,8 @@ which appends written `.md` files to the output before the judge scores it.
 
 A test's score is the weighted average of its checks, and it passes at 0.9.
 `safety`, `topology-preservation` and `partner-profile-unchanged` carry extra
-weight so that missing any one of them still fails the test.
+weight so that missing any one of them still fails the test. `cost` and
+`latency` carry 0.1 each, so they lower the score but can't fail a test.
 
 ## Environment
 

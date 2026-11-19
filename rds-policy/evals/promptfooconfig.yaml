@@ -54,15 +54,18 @@ defaultTest:
   # A test passes when its weighted score is at least 0.9, so one minor miss no
   # longer fails it. Checks that must still fail a test on their own carry more
   # weight (safety in T2; topology-preservation and partner-profile-unchanged
-  # in T4).
+  # in T4). cost and latency carry 0.1 each, so they lower the score but cannot
+  # fail a test, even together (T3 has the least other weight, 2: 2/2.2 = 0.91).
   threshold: 0.9
   assert:
     - type: cost
       threshold: 3.00
       metric: cost
+      weight: 0.1
     - type: latency
       threshold: 900000  # ms — 15 min total runtime per test (p90 ~8 min, see README.md)
       metric: latency
+      weight: 0.1
 
 tests:
   # ============================================================
