@@ -1,22 +1,20 @@
 # Red Hat Telco agentic plugin
 
-Skills for telco partners running the OpenShift RAN and Core reference
-configurations. Both reference types are handled with the same skill,
-`rds-policy-update`, which updates your Day 2 PolicyGenerator policies when
-you move to a new OCP version, say 4.18 to 4.20.
+Skills applicable to deploying, managing, and operating OpenShift clusters
+running telco workloads.
 
 **Persona**: Telco partner platform engineer (OpenShift RAN or Core)
 **Marketplaces**: Lola, Claude Code
 
-**AI-generated output requires expert human review.** This skill relies
-on a large language model (LLM) to produce its results. LLMs can and do
+**AI-generated output requires expert human review.** These skills rely
+on a large language model (LLM) to produce their results. LLMs can and do
 make mistakes — including reasonable-looking output that is subtly wrong.
 You **must** review all generated output (policies and other artifacts)
 for correctness, completeness, accuracy, and suitability before applying
 them to your environment. Do not deploy AI-generated configuration
 without thorough expert human review.
 
-**Data handling and privacy.** Any input provided to the skill —
+**Data handling and privacy.** Any input provided to these skills —
 including policy files, configuration data, cluster details, and Git
 repository content — may be sent to the LLM for processing.
 
@@ -25,51 +23,61 @@ See the full
 
 ## Getting Started
 
-The skill runs under Claude Code, the only environment we've tested so far.
-You can install it with Lola or as a Claude Code plugin. The plugin adds a
-validation hook that runs `kustomize build` on each PolicyGenerator file as
-it's written, so the agent can fix errors right away. See
-[HOOKS.md](https://github.com/openshift-kni/ai-sandbox/blob/main/rds-policy/docs/HOOKS.md).
+The skills are tested with Claude Code. You can install them with Lola or as
+a Claude Code plugin. The plugin also includes any hooks a skill ships with;
+Lola installs only the skills.
 
-The environment where the skill runs needs:
+### Lola
 
-- `podman` with access to `registry.redhat.io`
-- Read access to your policies, either:
-  - a local copy
-  - an authenticated Git repo with valid certificates (if your Git host uses
-    internal certificates, add them to the trust store first)
-- For the validation hook: `kustomize`, the PolicyGenerator plugin, and `jq`
-
-Install with Lola, from your project:
+From your project:
 
 ```bash
-lola market add rh-agentic-collections https://raw.githubusercontent.com/RHEcosystemAppEng/agentic-catalog/rc/v1.0.0/marketplace/rh-agentic-collection.yml
+lola market add rh-agentic-collections https://raw.githubusercontent.com/RHEcosystemAppEng/agentic-catalog/main/marketplace/rh-agentic-collection.yml
 lola install rh-telco -a claude-code
 ```
 
-Lola puts the skill in `.claude/skills/` and keeps a copy of the catalog in
+Lola puts the skills in `.claude/skills/` and keeps a copy of the catalog in
 `.lola/`. Add `.lola/` to your `.gitignore`.
 
-Or install it as a Claude Code plugin:
+To update, remove the module and install it again. Removing it uninstalls it
+from every project, so reinstall it wherever you use it:
 
 ```bash
-claude plugin marketplace add 'RHEcosystemAppEng/agentic-catalog#rc/v1.0.0'
+lola market update rh-agentic-collections
+lola mod rm -f rh-telco
+lola install rh-telco -a claude-code
+```
+
+### Claude Code plugin
+
+```bash
+claude plugin marketplace add RHEcosystemAppEng/agentic-catalog
 claude plugin install rh-telco@ecosystem-plugins
 ```
 
-Then ask:
+To update:
+
+```bash
+claude plugin marketplace update ecosystem-plugins
+claude plugin update rh-telco@ecosystem-plugins
+```
+
+## Skills
+
+### rds-policy-update
+
+Updates your Day 2 PolicyGenerator policies when you move to a new OCP
+version, say 4.18 to 4.20. Both the RAN and Core reference configurations
+are handled with the same skill. You need `podman` with access to
+`registry.redhat.io` and read access to your policies. Then ask:
 
 ```
 upgrade my policies from 4.18 to 4.20, the policy source is ./acme-ran
 ```
 
-The skill first explains what changed between the two versions. When you
-say go, it merges those changes into a copy of your policies, asking before
-it copies anything and checking with you on each conflict. Your original
-files stay untouched. The results land in
-`/tmp/rds-merge-<target>-<timestamp>/`, along with a `checklist.md` showing
-what happened to each CR. Review them and push them through your usual
-process.
+See the
+[rds-policy-update docs](https://github.com/openshift-kni/ai-sandbox/blob/main/rds-policy/README.md#quick-start)
+for the full prerequisites, what a run does, and the validation hook.
 
 ## Development
 

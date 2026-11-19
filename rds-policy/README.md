@@ -66,6 +66,34 @@ assuming consistency across runs.
 The skill and hook ship in the `rh-telco` plugin. To install it, see the
 [plugin README](../agentic-plugins/rh-telco/README.md#getting-started).
 
+The environment where the skill runs needs:
+
+- `podman` with access to `registry.redhat.io`
+- Read access to your policies, either:
+  - a local copy
+  - an authenticated Git repo with valid certificates (if your Git host uses
+    internal certificates, add them to the trust store first)
+- For the validation hook: `kustomize`, the PolicyGenerator plugin, and `jq`
+
+Then ask:
+
+```
+upgrade my policies from 4.18 to 4.20, the policy source is ./acme-ran
+```
+
+The skill first explains what changed between the two versions. When you
+say go, it merges those changes into a copy of your policies, asking before
+it copies anything and checking with you on each conflict. Your original
+files stay untouched. The results land in
+`/tmp/rds-merge-<target>-<timestamp>/`, along with a `checklist.md` showing
+what happened to each CR. Review them and push them through your usual
+process.
+
+If you install the Claude Code plugin, a validation hook also runs
+`kustomize build` on each PolicyGenerator file as it's written, so the agent
+can fix errors right away. Lola installs the skill without the hook. See
+[HOOKS.md](docs/HOOKS.md).
+
 To test local changes, load the plugin from this checkout:
 
 ```sh
