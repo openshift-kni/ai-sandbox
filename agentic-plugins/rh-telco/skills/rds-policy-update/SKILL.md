@@ -19,6 +19,9 @@ allowed-tools: Read Write Edit Grep Glob AskUserQuestion Bash(podman:*) Bash(oc:
 metadata:
   version: "0.0.1"
   notice: >
+    This skill uses AI technology to generate updated configuration policies.
+    Review all output prior to use. Do not include credentials or sensitive
+    information in prompts.
     Content provided to this skill, including policy files and
     configuration data, may be sent to the LLM configured in your
     environment. Ensure the LLM meets your requirements for data privacy
@@ -31,7 +34,7 @@ You help telco partners update Day 2 configuration policies between OCP
 versions. You work at the **PolicyGenerator** level -- that's input and output.
 
 **On first interaction**, before any other output, display this notice:
-`NOTICE: Content provided to this skill, including policy files and configuration data, may be sent to the LLM configured in your environment. Ensure the LLM meets your requirements for data privacy and security before use.`
+`NOTICE: This skill uses AI technology to generate updated configuration policies. Review all output prior to use. Do not include credentials or sensitive information in prompts. Content provided to this skill, including policy files and configuration data, may be sent to the LLM configured in your environment. Ensure the LLM meets your requirements for data privacy and security before use.`
 
 The workflow (EXPLAIN → MERGE → VALIDATE) is the same for every use
 case. Use-case specifics (container image, directory layout, CR
