@@ -2,17 +2,18 @@
 
 One command creates a fresh confined sandbox, uploads the checkout, installs
 the pinned dependencies, runs Promptfoo, downloads the results, and deletes the
-sandbox. Vertex credentials never enter the sandbox: they stay on the gateway
-as an OpenShell provider.
+sandbox. The model gateway key stays on the OpenShell gateway as a provider. The
+sandbox gets a placeholder in `ANTHROPIC_API_KEY`, and OpenShell's proxy swaps in
+the real key on requests to the model gateway, so the agent never sees it.
 
 ## Prerequisites
 
 - OpenShell CLI and gateway version 0.0.116 or newer
 - A registered gateway (`openshell gateway list`)
-- Google Cloud Application Default Credentials with access to the configured
-  Vertex models
+- An Anthropic-compatible model gateway on HTTPS port 443 that serves the agent
+  model and `claude-sonnet-5`, the judge
 
-There is no config file. The scripts read the environment, and the gateway comes
+There is no config file to edit. The scripts read the environment, and the gateway comes
 from the CLI's own `OPENSHELL_GATEWAY`, so your current gateway is used unless
 you override it:
 
@@ -26,37 +27,31 @@ either, and you can copy a command out of one and run it by hand.
 
 | Script | What it does |
 | --- | --- |
-| `setup.sh` | one-time per gateway: store your gcloud ADC there as a provider |
+| `setup.sh` | store the model gateway key as a provider, once per gateway |
 | `run.sh` | the whole run: create, upload, eval, collect, delete |
 | `collect.sh` | download one sandbox's results; for retrying a failed download |
 | `clean.sh` | delete one sandbox |
 
 Each script's header lists the variables it reads.
 
-## One-time: register the Vertex provider
+## Set up the key
+
+Once per gateway, and again when the key or URL changes:
 
 ```sh
+export ANTHROPIC_BASE_URL=<model gateway url> ANTHROPIC_API_KEY=<key>
 make openshell-setup
 ```
 
-This stores your local gcloud ADC on the gateway as a `google-vertex-ai`
-provider. A sandbox created with `--provider` sees only a placeholder token in
-`GOOGLE_VERTEX_AI_TOKEN`, plus `ANTHROPIC_VERTEX_PROJECT_ID` and
-`CLOUD_ML_REGION`; the sandbox proxy substitutes the real short-lived token on
-requests to `aiplatform.googleapis.com`. That placeholder is handed to both
-Vertex clients: Claude Code skips its own Google auth
-(`CLAUDE_CODE_SKIP_VERTEX_AUTH=1`) and sends it as its bearer token, and the
-judge switches from Promptfoo's `vertex:` provider, which insists on an ADC
-file, to the plain HTTP client configured in `promptfooconfig.yaml`.
-Both grader clients are configured in that file; `make eval-openshell` selects
-the HTTP client with `PROMPTFOO_GRADING_PROVIDER=https`. No credential file is
-uploaded.
+`setup.sh` imports `openshell-provider.yaml` as a provider profile for the model
+gateway host and creates the `rds-model-gateway` provider from
+`ANTHROPIC_API_KEY`. The CLI reads the key from the environment, so it is not
+on the command line. After this, `run.sh` doesn't need the key.
 
 ## Run
 
 ```sh
-export VERTEX_AI_PROJECT_ID=my-gcp-project
-make openshell-setup    # once per gateway
+export ANTHROPIC_BASE_URL=<model gateway url> RDS_AGENT_MODEL=<agent model>
 make openshell-run
 ```
 
@@ -80,9 +75,7 @@ Install and eval run as one detached job inside the sandbox, polled with short
 route's idle timeout once they go quiet for about a minute. Promptfoo runs three
 tests at a time (`PROMPTFOO_CONCURRENCY`; the full suite takes about seven
 minutes). If a run reports `policy_denied` with "ambiguous shared socket
-ownership", rerun with `PROMPTFOO_CONCURRENCY=1`: that denial hit the judge's ADC
-token refresh once at concurrency 4 and has not recurred since the credential
-file left the sandbox.
+ownership", rerun with `PROMPTFOO_CONCURRENCY=1`.
 
 If the download fails, `run.sh` keeps the sandbox and prints the retry. Finish it
 by hand:
@@ -115,11 +108,17 @@ database is untouched.
 
 ## Policy and image
 
-`openshell-policy.yaml` is passed on `sandbox create` by `run.sh`. Gateways provisioned by
+`run.sh` fills in the model gateway's host from `ANTHROPIC_BASE_URL` and passes
+`openshell-policy.yaml` on `sandbox create`. Gateways provisioned by
 the team's `ooo` installer carry a global policy lock, and then the global
 policy applies instead; `openshell policy get <sandbox>` shows which one is in
-effect. Either way the eval needs egress to Vertex, the npm registry, PyPI, and
-GitHub release assets.
+effect. Either way the eval needs egress to the model gateway, the npm registry,
+PyPI, and GitHub release assets.
+
+The rule for the model gateway must be L7 (`protocol: rest`), or OpenShell
+can't add the key and refuses to create the sandbox. Endpoints from the provider
+profile are not added to a global policy, so on a locked gateway the global
+policy itself must list the model gateway host with `protocol: rest`.
 
 `run.sh` creates the sandbox from the OpenShell community `base` image
 (`--from base`), which already ships uv, Python 3.14, node and git, so the run
