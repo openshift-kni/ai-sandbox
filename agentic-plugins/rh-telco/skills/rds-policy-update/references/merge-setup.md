@@ -48,7 +48,8 @@
    (it differs by use case — e.g. Core streams a base64 tar, so `oc
    image extract` does not apply). Prefer re-extracting each run; reuse
    a local `ref-{version}/` only when confirmed latest, per EXPLAIN
-   step 1.
+   step 1. Keep reference CRs copied or extracted as-is unchanged; do not
+   add AI-generated markers or annotations to them.
 7. **Restore staged custom source-CRs** -- copy the files staged in
    step 5 back into the output, in a directory **separate** from the
    managed reference source-CRs (e.g. `custom-crs/`) -- never intermixed
