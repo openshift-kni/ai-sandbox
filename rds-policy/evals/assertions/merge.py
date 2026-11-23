@@ -112,14 +112,20 @@ def _check_unchanged(check, written):
         if part.startswith("rds-merge-")
     }
     copies = {Path(p) for p in written if p.endswith("/" + rel)}
-    copies |= {c for r in roots if r.is_dir() for c in r.rglob(Path(rel).name)
-               if str(c).endswith("/" + rel)}
+    copies |= {
+        c
+        for r in roots
+        if r.is_dir()
+        for c in r.rglob(Path(rel).name)
+        if str(c).endswith("/" + rel)
+    }
     changed = sorted(str(c) for c in copies if load(c) != want)
     return (
         name,
         not changed,
         f"{rel} unchanged from {check['source']}/",
-        f"changed: {', '.join(changed)}" if changed
+        f"changed: {', '.join(changed)}"
+        if changed
         else f"{len(copies)} copies unchanged",
     )
 
