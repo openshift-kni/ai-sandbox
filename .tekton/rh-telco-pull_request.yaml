@@ -23,7 +23,7 @@ spec:
     - name: name
       value: plugin-component-build
     - name: bundle
-      value: quay.io/ecosystem-appeng/konflux-plugin-pipelines:per-plugin-componnent-20261116-source-subdir-build-v1@sha256:57e8c001136997b91189750106342a10dcbd13192241c8f86bfa2abaf35c9512
+      value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/pipeline-plugin-component-build:8e3c7d33fa7304452303c8e5314c1ddd1d60639e@sha256:07377ab345f215af127965d6fba4a0d9a3b00c12ed51f795c0c4c5d5f4a30770
     - name: kind
       value: pipeline
   params:
@@ -32,7 +32,9 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/telco-plugins/rh-telco:{{revision}}
+    value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/telco-plugins/rh-telco:on-pr-{{revision}}
+  - name: image-expires-after
+    value: 5d
   - name: plugin-id
     value: rh-telco
   - name: source-subdir
@@ -44,9 +46,9 @@ spec:
   - name: prepare-task-bundle
     value: quay.io/konflux-ci/tekton-catalog/task-run-script-oci-ta:0.1.3@sha256:e1b074b6c5818f17c1967581e94c1a45f051055196bcf3638d465362aa0b4936
   - name: evaluation-task-bundle
-    value: quay.io/ecosystem-appeng/konflux-skill-evaluation/aeh-skill-eval:3.1.0@sha256:e5d4858a54e4f186be2be77e0ef5fe2343fc3878401a91c9abe1a46cde1dd9eb
+    value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/task-aeh-skill-eval:48f7b23e5148ea90098762fbe4a8e1549e6f7d8d@sha256:3e73e4e6b52b8cb00df5ea1051f6970c912feeae4ae4b2884dc17ebc7fc3f675
   - name: label-task-bundle
-    value: quay.io/ecosystem-appeng/konflux-skill-evaluation/check-pr-label:0.2.1@sha256:01c867e65305a8cf0a7ec7dd66d87eaacac7ef9d8d70f027b819e8552f92c0ac
+    value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/task-check-pr-label:c094475c897ad4db6f578895d485482530bda762@sha256:2b34828d641fb80027111453565f77c452051ba44a4aef6f121082da24933aad
   - name: target-branch
     value: main
   - name: gitlab-server-url
@@ -74,9 +76,9 @@ spec:
   - name: evidence-image
     value: quay.io/ecosystem-appeng/plugin-pipeline-tools:per-plugin-componnent-20261116-source-subdir-v1@sha256:bdf07289e1feea846ffc7ee29dd22fe359bb8d3db3b4077e9e2831a410c687c2
   - name: verify-task-bundle
-    value: quay.io/ecosystem-appeng/konflux-skill-evaluation/verify-plugin-evidence:1.0.0@sha256:6a1f8536d700353d170ce153338de97cb88c675c87ff26b1fd699986d2f8ba92
+    value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/task-verify-plugin-evidence:62ad8f5ca3a3462502bda2a8c56e4697706c6985@sha256:00f6ef9c9c07bc63a4fe12cbd1fd78d092d0a05c87658cc716f651102984c368
   - name: compass-task-bundle
-    value: quay.io/ecosystem-appeng/konflux-skill-evaluation/collect-plugin-context:1.0.0@sha256:3a73ec3083f0dbdb203a1e0766454a429b88851487c7ba2adfecc926f30243e3
+    value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/task-collect-plugin-context:25171e38e21dbc0f802363d8ba643a34089db678@sha256:377a22ff599b056ccdcf37a805cc12ae9696919a2c97e25126a50c6c5bfc9869
   - name: compass-url
     value: https://compass.stage.redhat.com
   - name: compass-secret
