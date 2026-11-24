@@ -24,7 +24,7 @@ spec:
     - name: name
       value: plugin-component-build
     - name: bundle
-      value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/pipeline-plugin-component-build:8e3c7d33fa7304452303c8e5314c1ddd1d60639e@sha256:07377ab345f215af127965d6fba4a0d9a3b00c12ed51f795c0c4c5d5f4a30770
+      value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/pipeline-plugin-component-build:8a8d5ac9df34a006004189dea3158cd9a9a73559@sha256:e6030125ea7e7be0022fa8967b50ecab19526f8af0d78cdfa9df11becfd3b458
     - name: kind
       value: pipeline
   params:
@@ -47,7 +47,7 @@ spec:
   - name: evaluation-task-bundle
     value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/task-aeh-skill-eval:48f7b23e5148ea90098762fbe4a8e1549e6f7d8d@sha256:3e73e4e6b52b8cb00df5ea1051f6970c912feeae4ae4b2884dc17ebc7fc3f675
   - name: label-task-bundle
-    value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/task-check-pr-label:c094475c897ad4db6f578895d485482530bda762@sha256:2b34828d641fb80027111453565f77c452051ba44a4aef6f121082da24933aad
+    value: quay.io/redhat-user-workloads/ai5-marketplace-tenant/task-check-pr-label:8a8d5ac9df34a006004189dea3158cd9a9a73559@sha256:dd3dabeb788ff749bf6ddd4e325700e377cb36a05b565201f9e744880c596c14
   - name: target-branch
     value: main
   - name: gitlab-server-url
@@ -66,10 +66,11 @@ spec:
     value: quay.io/ecosystem-appeng/agent-eval-harness:per-plugin-componnent-20261105-harness8@sha256:6e45ccc233515d50a832e18ef2e7ef6d33c9368653b10db6d0c2d69323bbca5f
   - name: trial-image
     value: quay.io/ecosystem-appeng/agent-eval-harness:v1.0.2-trial@sha256:374b28704de8562ae2d6130d84d8d33d99db7dfe9680315034b10db5308cc983
-  # Konflux builds the GitLab mirror of openshift-kni/ai-sandbox. PR labels are on GitHub.
-  # Use Tier 1 until the shared Pipeline forwards github-repository to check-pr-label.
+  # Konflux builds the GitLab mirror and reads evaluation labels from upstream GitHub PRs.
+  - name: mirror-source
+    value: https://github.com/openshift-kni/ai-sandbox
   - name: tiers
-    value: '1'
+    value: auto
   - name: persist
     value: postgres,compass
   - name: persistence-required
