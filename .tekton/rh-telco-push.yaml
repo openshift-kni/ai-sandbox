@@ -64,9 +64,9 @@ spec:
   - name: insecure-ssl
     value: 'false'
   - name: evaluation-image
-    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.1-runner@sha256:d27e35eec87e98840bcab08f821a510428418b2e962cbd256a4b0508e9f6566e
+    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.1-runner@sha256:2ad555cf14f959f160f74b69ea6450c51b161c656814f447025f308d8600e9e5
   - name: trial-image
-    value: quay.io/ecosystem-appeng/agent-eval-harness:telco-aeh-judge-13515ec-trial@sha256:d7005c4b4aa05c79013424abfe8f0bbab2f7c5cc04569d7271c9798627fe27f3
+    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.1-trial@sha256:63f467d1d63ad827abe2dd19da59c5af6e4a2af8e9235be6b154bb92dddf2249
   - name: agent-api-base
     value: https://api.enmaas.devshift.net
   - name: llm-api-base
