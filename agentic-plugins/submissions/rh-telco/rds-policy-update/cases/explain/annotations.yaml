@@ -1,0 +1,65 @@
+rubrics:
+- metric: explain-tuned
+  threshold: 0.5
+  criteria: |
+    The output mentions the TunedPerformancePatch changes between
+    4.18 and 4.20 (profile rename, restructure, or priority change).
+    Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
+- metric: explain-gvk
+  threshold: 0.5
+  criteria: |
+    The output mentions the GVK migration from ICSP to IDMS
+    (ImageContentSourcePolicy to ImageDigestMirrorSet, or
+    DisconnectedICSP to DisconnectedIDMS).
+    Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
+- metric: explain-console
+  threshold: 0.5
+  criteria: |
+    The output mentions that ConsoleOperatorDisable changed and
+    correlates the two aspects: managementState: Removed in the
+    source-cr AND complianceType: mustnothave in the PG (i.e. the
+    console is now fully removed, not just disabled).
+    Score 1.0 if the correlation is explicit, 0.5 if both are
+    mentioned but not connected, 0.0 if either is absent.
+- metric: explain-nmstate
+  threshold: 0.5
+  criteria: |
+    The output mentions that NMStateOperator was removed from the
+    reference PolicyGenerator in 4.20 (dropped from tracking, omitted
+    from policy, or similar phrasing).
+    Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
+- metric: explain-ptp
+  threshold: 0.5
+  criteria: |
+    The output mentions PTP scheduling changes — new ptpSchedulingPolicy
+    (SCHED_FIFO) and/or ptpSchedulingPriority fields added to
+    PtpConfigBoundary and/or PtpConfigSlave source-crs.
+    These are source-crs-only changes that will be picked up automatically
+    by using the new source-crs.
+    Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
+- metric: explain-storagelv
+  threshold: 0.5
+  criteria: |
+    The output mentions the StorageLV changes: wave changed from 2 to 10,
+    and/or nodeSelector added.
+    Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
+- metric: explain-subscription
+  threshold: 0.5
+  criteria: |
+    The output mentions the SubscriptionOCP channel change from
+    stable-4.18 to stable-4.20 (or equivalent version bump language).
+    Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
+- metric: explain-sriovfec
+  threshold: 0.5
+  criteria: |
+    The output mentions the SriovFecClusterConfig change — a priority
+    field was added in the 4.20 source-cr.
+    Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
+- metric: workflow
+  threshold: 1.0
+  criteria: |
+    The agent explained what changed between reference versions
+    (CR changes, GVK migrations, removals, renames) BEFORE asking
+    the user for their policy source location or merge inputs.
+    If the agent asked for the policy directory before explaining
+    the reference changes, score 0.0. If EXPLAIN came first, score 1.0.

@@ -1,0 +1,12 @@
+rubrics:
+- metric: required-cr-severity
+  threshold: 0.5
+  criteria: |
+    The agent warned about missing required CRs using explicit warning
+    language. The partner policy omits TunedPerformancePatch and
+    PtpConfigSlave (or PtpConfigSlave-SetSelector), which are required
+    (uncommented in reference PG examples). The skill instructs: use
+    "WARNING" and "required" words.
+    Score 1.0 if both CRs flagged with warning/required language,
+    0.5 if at least one flagged with warning language,
+    0.0 if neither flagged or only noted without warning severity.

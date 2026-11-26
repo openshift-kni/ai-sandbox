@@ -1,0 +1,231 @@
+rubrics:
+- metric: merge-communication
+  threshold: 0.5
+  criteria: |
+    The agent's output discusses the following merge topics:
+    1. GVK migration (ICSP to IDMS, or ImageContentSourcePolicy to ImageDigestMirrorSet)
+    2. NMState removal or deprecation
+    3. A priority or value change where the partner's value differs from the reference
+    4. Subscription channel changes
+    Score 1.0 if all 4 topics are covered, 0.75 if 3, 0.5 if 2, 0.25 if 1, 0.0 if none.
+- metric: conflict-flagging
+  threshold: 0.5
+  criteria: |
+    The agent noted a priority override: the partner had priority 19
+    but the 4.20 reference uses 18. The agent should present BOTH
+    values so the user can see what was overridden (even if applying
+    the default). Score 1.0 if both values (19 and 18) are shown
+    together in the context of the priority change, 0.5 if priority
+    change is mentioned but only one value shown, 0.0 if absent.
+- metric: overlay-lifecycle
+  threshold: 0.5
+  criteria: |
+    The agent flagged these overlay lifecycle issues:
+    1. (Required) Subscription channel conflict — partner pins 4.18 channel,
+       reference moves to 4.20
+    2. (Required) NMState CR removal — partner uses NMState but it was
+       removed in 4.20 references
+    Score 1.0 if both required items flagged, 0.5 if one, 0.0 if neither.
+- metric: wave-change-flagging
+  threshold: 0.5
+  criteria: |
+    The agent flagged that StorageLV (or LVMCluster) moved from
+    wave 2 to wave 10 in the 4.20 reference — a deployment ordering change.
+    Score 1.0 if wave change explicitly flagged, 0.5 if StorageLV
+    mentioned without wave context, 0.0 if not mentioned.
+- metric: mustnothave-warning
+  threshold: 0.5
+  criteria: |
+    The agent warned about ConsoleOperatorDisable: the partner has
+    overlay patches (e.g. logLevel) but the 4.20 reference marks it
+    as mustnothave (removal directive). The conflict between
+    customization and removal should be flagged.
+    Score 1.0 if conflict clearly flagged, 0.5 if Console mentioned
+    with removal context, 0.0 if not mentioned.
+- metric: tuned-restructure-completeness
+  threshold: 0.49
+  criteria: |
+    TunedPerformancePatch was restructured from 1 profile to 4
+    architecture-specific profiles in 4.20. The partner had custom
+    [sysctl] (kernel.timer_migration=0), [scheduler] (ice-ptp,
+    ice-gnss, ice-dplls), and [service] (stalld, chronyd) sections.
+    The agent should:
+    1. Acknowledge the restructure (1→4 profiles)
+    2. Explain where the partner's custom sections end up
+    Score 1.0 if restructure acknowledged AND placement explained,
+    0.5 if restructure acknowledged without placement detail,
+    0.0 if not mentioned.
+- metric: redundant-overlay
+  threshold: 0.5
+  criteria: |
+    The agent flagged at least one redundant overlay — a partner patch
+    that sets a field to the same value the reference already has.
+    The fixture's installPlanApproval: Automatic on SubscriptionOCP
+    matches the reference default. The agent should flag this as
+    redundant or unnecessary so the partner can clean up.
+    Score 1.0 if explicitly flagged as redundant/unnecessary,
+    0.5 if mentioned without cleanup suggestion, 0.0 if not flagged.
+- metric: coverage-scan
+  threshold: 0.5
+  criteria: |
+    The agent performed a coverage scan: it compared the reference
+    CR set against the partner's CRs and reported which reference CRs
+    the partner does not include. At minimum it should note that
+    SriovFecClusterConfig is not used by the partner.
+    Score 1.0 if coverage scan clearly present, 0.5 if partially
+    covered, 0.0 if no coverage reporting at all.
+- metric: checklist-quality
+  threshold: 0.5
+  criteria: |
+    The agent produced a structured merge summary or checklist that
+    documents the key changes applied: GVK migration, CR removals,
+    version bumps, conflicts flagged, and partner-only CRs preserved.
+    The summary should show completion status for each item.
+    Score 1.0 if comprehensive summary with status indicators,
+    0.5 if partial summary, 0.0 if no summary produced.
+- metric: custom-source-cr-detection
+  threshold: 0.5
+  criteria: |
+    The partner has a custom-crs/AcmePtpConfig.yaml which is a
+    partner-created variant of the reference PtpConfig CRs. The agent
+    should notice this is a partner-specific CR (custom source-CR or
+    duplicate of a reference CR) and either preserve it unchanged or
+    flag it for the user. Score 1.0 if explicitly flagged as a custom
+    or partner-specific CR, 0.5 if preserved without flagging,
+    0.0 if dropped or treated as a reference CR.
+- metric: setselector-enforcement
+  threshold: 0.5
+  criteria: |
+    The 4.20 reference PG example uses PtpConfigSlave-SetSelector.yaml
+    instead of PtpConfigSlave.yaml. The partner uses the non-SetSelector
+    variant. The agent should notice the -SetSelector variant is
+    available and either switch to it or flag it for the user.
+    Score 1.0 if SetSelector flagged or switched, 0.5 if mentioned
+    without action, 0.0 if not mentioned.
+- metric: oauth-new-fields-flagged
+  threshold: 0.5
+  criteria: |
+    The 4.20 reference OAuthLDAP added new fields (insecure, ca,
+    bindPassword, attributes, mappingMethod) that the partner's
+    patch does not include. The agent should mention or flag these
+    new fields as available — NOT necessarily add them to the
+    output, but inform the partner they exist in the new reference.
+    Score 1.0 if new OAuth fields mentioned/flagged, 0.5 if OAuth
+    changes mentioned generally, 0.0 if not mentioned.
+- metric: version-bearing-fields-flagged
+  threshold: 0.5
+  criteria: |
+    The partner fixture has version-bearing fields beyond PG metadata:
+    LCA annotations (lca.openshift.io/target-ocp-version: "4.18.13")
+    on StorageLV and AcmeMonitoring, and an AcmeMonitoring data field
+    containing a catalog image tag "1.3.0". The agent should flag or
+    update ALL of these during the semver sweep, not just the PG
+    metadata fields.
+    Score 1.0 if version annotations AND image tag are addressed,
+    0.5 if at least one is addressed, 0.0 if neither is mentioned.
+- metric: custom-path-preservation
+  threshold: 0.49
+  criteria: |
+    The partner uses custom-crs/ paths for partner-specific CRs
+    (AcmeMonitoring, AcmePtpConfig).
+    The agent must preserve these custom-crs/ paths in the output
+    PolicyGenerator files — NOT replace them with reference paths.
+    Score 1.0 if all custom-crs/ paths preserved,
+    0.5 if some preserved, 0.0 if paths were replaced.
+- metric: pre-existing-issue-flagging
+  threshold: 0.0
+  criteria: |
+    The partner's policies contain pre-existing issues not caused by
+    the version upgrade. A thorough agent should flag at least some:
+    1. AcmeMonitoring has data nested under metadata in patches (YAML structural bug)
+    2. AcmeMonitoring references "restic-backup" (deprecated terminology)
+    The agent should mention at least one pre-existing concern.
+    Score 1.0 if both flagged, 0.5 if one flagged, 0.0 if neither.
+- metric: ibu-stage-completeness
+  threshold: 0.49
+  criteria: |
+    The reference has 3 IBU lifecycle stages (Prep, Upgrade,
+    Finalize) but the partner only has Prep and Finalize. The
+    agent should flag the missing Upgrade stage as a gap.
+    Score 1.0 if missing stage explicitly flagged,
+    0.5 if IBU stages mentioned without flagging the gap,
+    0.0 if not mentioned.
+manifests:
+- name: idms_exists
+  type: exists
+  cr: DisconnectedIDMS
+- name: icsp_removed
+  type: not_exists
+  cr: DisconnectedICSP
+- name: idms_mirrors_populated
+  cr: DisconnectedIDMS
+  path: patches[].spec.imageDigestMirrors
+- name: icsp_mirrors_absent
+  cr: DisconnectedIDMS
+  path: patches[].spec.repositoryDigestMirrors
+  empty: true
+- name: partner_mirror_preserved
+  cr: DisconnectedIDMS
+  path: patches[].spec.imageDigestMirrors
+  contains: registry.acme.example.com
+- name: tuned_sysctl_preserved
+  cr: TunedPerformancePatch
+  path: patches[].spec
+  contains: kernel.timer_migration
+- name: tuned_exists
+  type: exists
+  cr: TunedPerformancePatch
+- name: partner_custom_cr_preserved
+  type: exists
+  cr: AcmeMonitoring
+- name: ptp_interface_ens7f0
+  cr: PtpConfigSlave
+  path: patches[].spec.profile[].interface
+  contains: ens7f0
+- name: ptp_interface_ens8f0
+  cr: PtpConfigSlave
+  path: patches[].spec.profile[].interface
+  contains: ens8f0
+- name: nmstate_removed
+  type: not_exists
+  cr: NMStateOperator
+- name: storagelv_patch_preserved
+  cr: StorageLV
+  path: patches[].spec.storage.deviceClasses[].thinPoolConfig.sizePercent
+- name: tuned_scheduler_preserved
+  cr: TunedPerformancePatch
+  path: patches[].spec
+  contains: group.ice-ptp
+- name: tuned_service_preserved
+  cr: TunedPerformancePatch
+  path: patches[].spec
+  contains: service.stalld
+- name: monitoring_cr_replaced
+  type: exists
+  cr: ReduceMonitoringFootprint
+- name: old_monitoring_cr_removed
+  type: not_exists
+  cr: ClusterMonitoringConfig
+- name: ibu_exists
+  type: exists
+  cr: ImageBasedUpgrade
+- name: no_unrequested_ptp_boundary
+  type: not_exists
+  cr: PtpConfigBoundary
+required_files:
+- checklist.md
+- explain.md
+check_upgrade_structure: true
+reviewable_version_pins:
+- resource: StorageLV
+  manifest: source-crs/StorageLV.yaml
+  label: lca.openshift.io/target-ocp-version
+  value: '4.18.13'
+- resource: AcmeMonitoring
+  file: custom-crs/AcmeMonitoring.yaml
+  kind: ConfigMap
+  name: acme-monitoring-config
+  label: lca.openshift.io/target-ocp-version
+  value: '4.18.13'
+forbid_live_apply: true
+required_yaml_snippet: '{"apiVersion":"config.openshift.io/v1"}'

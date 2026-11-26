@@ -1,0 +1,69 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: acme-config-v4-18
+policyDefaults:
+  namespace: ztp-acme-v4-18
+  placement:
+    labelSelector:
+      cluster-version: "v4.18"
+      acme-policy: "v1"
+  remediationAction: enforce
+  severity: low
+policies:
+- name: acme-config-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "1"
+  manifests:
+    - path: source-crs/ClusterMonitoringConfig.yaml
+      patches:
+      - data:
+          config.yaml: '{{hub fromConfigMap "ztp-acme-v4-18" "monitoring-values" "config" hub}}'
+    - path: source-crs/DisconnectedICSP.yaml
+      patches:
+      - spec:
+          repositoryDigestMirrors:
+          - mirrors:
+            - registry.acme.example.com:5000
+            source: registry.redhat.io
+    - path: source-crs/ConsoleOperatorDisable.yaml
+      patches:
+      - spec:
+          logLevel: Debug
+- name: acme-operator-sub-policy
+  policyAnnotations:
+    ran.openshift.io/ztp-deploy-wave: "2"
+  manifests:
+    - path: source-crs/SubscriptionOCP.yaml
+      patches:
+      - spec:
+          channel: "stable-4.18"
+          installPlanApproval: Automatic
+    - path: source-crs/OAuthLDAP.yaml
+      patches:
+      - metadata:
+          annotations:
+            kubectl.kubernetes.io/last-applied-configuration: '{"apiVersion":"config.openshift.io/v1"}'
+        spec:
+          identityProviders:
+          - name: ldap-provider
+            type: LDAP
+            ldap:
+              url: "ldap://ldap.acme.example.com"
+              bindDN: "cn=svc-ocp,ou=services,dc=acme,dc=com"
+    - path: source-crs/NMStateOperator.yaml
+      patches:
+      - metadata:
+          labels:
+            acme-managed: "true"
+    - path: source-crs/StorageLV.yaml
+      patches:
+      - metadata:
+          labels:
+            lca.openshift.io/target-ocp-version: "4.18.13"
+        spec:
+          storage:
+            deviceClasses:
+            - name: vg1
+              thinPoolConfig:
+                sizePercent: 80

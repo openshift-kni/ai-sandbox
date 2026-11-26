@@ -1,0 +1,23 @@
+schema_version: '1.0'
+name: rds-policy-update
+plugin_name: rh-telco
+description: Fixture-backed RDS 4.18 to 4.20 policy upgrade evaluations for RAN and Core.
+version: 0.1.0
+eval_engine: aeh
+aeh_mode: single
+agent_timeout_sec: 900
+gate_policy:
+  default_mode: warn
+  combination: all_pass
+  push_facts:
+    endpoint: https://compass.stage.redhat.com/api/soundcheck/facts/
+    entity_ref: airesource:rh-telco/rds-policy-update
+    fact_ref_prefix: ai5-marketplace:default/
+    bearer_token: ${COMPASS_API_TOKEN}
+  gates:
+    evaluation:
+      push_fact: true
+    security:
+      push_fact: true
+    quality:
+      push_fact: true

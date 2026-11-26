@@ -1,0 +1,8 @@
+prompt: |
+  upgrade my policies from 4.18 to 4.20. the policy source is fixtures/partner-comprehensive/ which has three PolicyGenerator files and a kustomization.yaml. do the full EXPLAIN and MERGE end-to-end, use recommended defaults for any conflicts
+
+  Flag redundant partner patches in the checklist and keep them unless I explicitly approve removal.
+
+  Use the local RAN fixtures fixtures/ref-4.18/ and fixtures/ref-4.20/ as the 4.18 and 4.20 references. The local fixtures are the authoritative reference snapshots for this run. Keep them read-only.
+
+  After completing the workflow in its scratch directory, copy the generated artifacts into output/ in the workspace, retaining their relative paths. Include the generated reports and any updated PolicyGenerator and kustomization files.
