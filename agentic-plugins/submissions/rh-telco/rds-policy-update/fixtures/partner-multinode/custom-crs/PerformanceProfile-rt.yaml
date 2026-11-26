@@ -1,0 +1,27 @@
+---
+apiVersion: performance.openshift.io/v2
+kind: PerformanceProfile
+metadata:
+  name: worker-1-rt-profile
+spec:
+  cpu:
+    isolated: "2-47,50-95"
+    reserved: "0-1,48-49"
+  globallyDisableIrqLoadBalancing: true
+  hugepages:
+    defaultHugepagesSize: 1G
+    pages:
+    - count: 2
+      size: 1G
+  nodeSelector:
+    node-role.kubernetes.io/worker-1: ""
+  workloadHints:
+    realTime: true
+    highPowerConsumption: true
+    perPodPowerManagement: false
+  realTimeKernel:
+    enabled: true
+  numa:
+    topologyPolicy: "single-numa-node"
+  net:
+    userLevelNetworking: false

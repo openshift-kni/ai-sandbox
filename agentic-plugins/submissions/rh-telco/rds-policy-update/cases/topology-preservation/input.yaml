@@ -1,0 +1,6 @@
+prompt: |
+  upgrade my telco core policies from 4.18 to 4.20. the policy source is fixtures/partner-multinode/. use the local reference directories fixtures/ref-mn-4.18/ and fixtures/ref-mn-4.20/ as the 4.18 and 4.20 references (do not use fixtures/ref-4.18/ or fixtures/ref-4.20/). do the full EXPLAIN and MERGE end-to-end
+
+  Use the specified local Core reference fixtures as-is for this evaluation. The local fixtures are the authoritative reference snapshots for this run. Keep them read-only.
+
+  After completing the workflow in its scratch directory, copy the generated artifacts into output/ in the workspace, retaining their relative paths. Include the generated reports and any updated PolicyGenerator and kustomization files.

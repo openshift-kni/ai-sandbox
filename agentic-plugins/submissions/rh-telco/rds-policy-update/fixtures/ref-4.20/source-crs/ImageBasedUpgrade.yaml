@@ -1,0 +1,13 @@
+apiVersion: lca.openshift.io/v1
+kind: ImageBasedUpgrade
+metadata:
+  name: upgrade
+  annotations:
+    ran.openshift.io/ztp-deploy-wave: "100"
+spec:
+  stage: Idle
+  seedImageRef:
+    version: "4.20.0"
+    image: "seed-registry.example.com/seed:4.20.0"
+  autoRollbackOnFailure:
+    initMonitorTimeoutSeconds: 1800

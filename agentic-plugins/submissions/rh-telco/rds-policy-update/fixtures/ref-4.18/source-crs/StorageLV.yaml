@@ -1,0 +1,15 @@
+apiVersion: local.storage.openshift.io/v1alpha1
+kind: LVMCluster
+metadata:
+  name: storage-lv
+  namespace: openshift-storage
+  annotations:
+    ran.openshift.io/ztp-deploy-wave: "2"
+spec:
+  storage:
+    deviceClasses:
+    - name: vg1
+      thinPoolConfig:
+        name: thin-pool-1
+        sizePercent: 90
+        overprovisionRatio: 10
