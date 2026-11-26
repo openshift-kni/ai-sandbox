@@ -64,7 +64,7 @@ spec:
   - name: insecure-ssl
     value: 'true'
   - name: evaluation-image
-    value: quay.io/ecosystem-appeng/agent-eval-harness:telco-glm-review-4ab84dc-runner@sha256:8cec3c84349cd7718f40fd7309093a0c4ff6d8269cd2c42732774c61fe562b29
+    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.0-runner@sha256:d132824f7b0faf70915e654c1800613e9615867b17e2d98a7544e33fb74d4190
   - name: trial-image
     value: quay.io/ecosystem-appeng/agent-eval-harness:telco-aeh-judge-13515ec-trial@sha256:d7005c4b4aa05c79013424abfe8f0bbab2f7c5cc04569d7271c9798627fe27f3
   - name: tiers
