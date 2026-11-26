@@ -137,15 +137,32 @@ judges:
               label = defaults.get("placement", {}).get("labelSelector", {}).get("cluster-version", "")
               if not all(version.search(str(value)) for value in (name, defaults.get("namespace", ""), label)):
                   failures.append(f"Missing target version in metadata, namespace or placement for {name}")
-          checklist_lines = [line for path, text in files.items()
-                             if PurePosixPath(path).name == "checklist.md" and isinstance(text, str)
-                             for line in text.splitlines()]
+          # A list item's indented continuation lines describe the same review.
+          # Keep sibling items, paragraphs, headings and table rows separate.
+          checklist_entries = []
+          for path, text in files.items():
+              if PurePosixPath(path).name != "checklist.md" or not isinstance(text, str):
+                  continue
+              content_indent = None
+              for line in text.expandtabs(4).splitlines():
+                  content = line.lstrip()
+                  marker = re.match(r"^ *(?:[-*+]|[0-9]{1,9}[.)]) +", line)
+                  indent = len(line) - len(content)
+                  if (content_indent is not None and content and not marker
+                          and content_indent <= indent < content_indent + 4
+                          and not content.startswith(("#", "|", ">", "```", "~~~"))):
+                      checklist_entries[-1].append(content)
+                  else:
+                      checklist_entries.append([line])
+                      content_indent = marker.end() if marker else None
+
+          entries = [" ".join(lines) for lines in checklist_entries]
           reviewed_pins = [pin for pin in annotations.get("reviewable_version_pins", [])
-                           if any(re.search(r"\bREVIEW\b", line)
-                                  and re.search(rf"\b{re.escape(pin['resource'])}\b", line)
-                                  and pin["label"] in line
-                                  and re.search(rf"\b{re.escape(pin['value'])}\b", line)
-                                  for line in checklist_lines)]
+                           if any(re.search(r"\bREVIEW\b", entry)
+                                  and re.search(rf"\b{re.escape(pin['resource'])}\b", entry)
+                                  and pin["label"] in entry
+                                  and re.search(rf"\b{re.escape(pin['value'])}\b", entry)
+                                  for entry in entries)]
 
           for path, parsed in documents.items():
               sweep_docs = deepcopy(parsed) if reviewed_pins else parsed
@@ -249,6 +266,19 @@ judges:
 
       Generated artifacts:
       {{ outputs.files }}
+  - name: pairwise
+    type: llm
+    verdict: tool
+    prompt: |
+      Compare the two sets of RDS policy update artifacts for the same request.
+      Request: {{ inputs }}
+      Case requirements and rubric thresholds: {{ annotations }}
+      Use the supplied criteria and required artifacts for this case. Apply
+      the same criteria to both outputs. Ground the comparison in the files
+      supplied; do not infer tool use or cluster changes from prose.
+      Prefer the output that better satisfies the scored criteria. Treat
+      advisory criteria as advisory. If the outputs are equally correct and
+      complete, return a tie. Give a brief reason grounded in the artifacts.
 reward:
   gate: true
   formula: weighted

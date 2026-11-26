@@ -4,7 +4,7 @@ plugin_name: rh-telco
 description: Fixture-backed RDS 4.18 to 4.20 policy upgrade evaluations for RAN and Core.
 version: 0.1.0
 eval_engine: aeh
-aeh_mode: single
+aeh_mode: pairwise
 agent_timeout_sec: 900
 gate_policy:
   default_mode: warn

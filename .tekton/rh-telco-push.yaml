@@ -64,7 +64,7 @@ spec:
   - name: insecure-ssl
     value: 'false'
   - name: evaluation-image
-    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.0-runner@sha256:d132824f7b0faf70915e654c1800613e9615867b17e2d98a7544e33fb74d4190
+    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.1-runner@sha256:ccb66d29ca9bc0b377139bf7d5ce0237ffd2855846e52a72d0414acc2b1f5edc
   - name: trial-image
     value: quay.io/ecosystem-appeng/agent-eval-harness:telco-aeh-judge-13515ec-trial@sha256:d7005c4b4aa05c79013424abfe8f0bbab2f7c5cc04569d7271c9798627fe27f3
   - name: agent-api-base
