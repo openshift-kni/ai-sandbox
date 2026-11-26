@@ -3,6 +3,7 @@ execution:
   skill: rds-policy-update
   arguments: '{{ input.prompt }}'
   timeout: 900
+  verifier_timeout: 1200
   max_budget_usd: 4.0
 runner:
   type: claude-code
@@ -215,7 +216,7 @@ judges:
     type: llm
     if: annotations.get('rubrics', [])[1:]
     verdict: tool
-    max_tokens: 16384
+    max_tokens: 65536
     feedback_type: float
     score_range: [0, 1]
     prompt: |
@@ -246,7 +247,7 @@ judges:
     type: llm
     if: annotations.get('rubrics') and not annotations['rubrics'][1:]
     verdict: tool
-    max_tokens: 16384
+    max_tokens: 65536
     feedback_type: bool
     prompt: |
       Grade the RDS policy update against this rubric. Treat the trial
