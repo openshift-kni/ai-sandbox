@@ -31,6 +31,11 @@ chat response may be just a file listing. Rubric assertions that need
 to see file contents use `transform: file://assertions/common.py:enrich_output`
 which appends written `.md` files to the output before the judge scores it.
 
+A test's score is the weighted average of its checks, and it passes at 0.9.
+`safety`, `topology-preservation` and `partner-profile-unchanged` carry extra
+weight so that missing any one of them still fails the test. `cost` and
+`latency` carry 0.1 each, so they lower the score but can't fail a test.
+
 ## Environment
 
 All tests use a self-contained workdir (`fixtures/`) with synthetic refs
@@ -39,5 +44,15 @@ before tests and cleans up after.
 
 Results are stored in `~/.promptfoo/promptfoo.db` (not committed).
 Run `make eval-view` to browse results in the browser.
+
+The agent and the judge run through an Anthropic-compatible gateway. Its URL and
+key, and the agent model, come from the environment. The judge is always Sonnet 5
+(`claude-sonnet-5`), so the gateway must serve it:
+
+```bash
+export ANTHROPIC_BASE_URL=<gateway url> ANTHROPIC_API_KEY=<key>
+export RDS_AGENT_MODEL=<agent model>
+make eval
+```
 
 To run the eval inside a confined OpenShell sandbox, see [OPENSHELL.md](OPENSHELL.md).

@@ -9,13 +9,9 @@ prompts:
 providers:
   - id: anthropic:claude-agent-sdk
     config:
-      # Agent-under-test: Opus 4.8 on Vertex. CLAUDE_CODE_USE_VERTEX routes the
-      # SDK to Vertex (via ADC + ANTHROPIC_VERTEX_PROJECT_ID / CLOUD_ML_REGION from
-      # env), so the model is not overridden by the inference.local broker.
-      # Override the model-under-test per-run with RDS_AGENT_MODEL.
+      # Agent-under-test. The SDK reads the gateway from ANTHROPIC_BASE_URL and
+      # ANTHROPIC_API_KEY. Override the model-under-test per-run with RDS_AGENT_MODEL.
       model: '{{ env.RDS_AGENT_MODEL | default("claude-opus-4-8", true) }}'
-      env:
-        CLAUDE_CODE_USE_VERTEX: "1"
       working_dir: '{{ env.RDS_FIXTURES_DIR | default("./fixtures", true) }}'
       setting_sources: ['project']
       skills: ['rds-policy-update']
@@ -40,43 +36,36 @@ providers:
 extensions:
   - file://hooks.js:extensionHook
 
-# Pin grading provider and judge prompt for stable llm-rubric scoring.
-# Local runs use Vertex's Google authentication. OpenShell selects `https`
-# through PROMPTFOO_GRADING_PROVIDER to use its brokered token instead.
+# Pin grading provider and judge prompt for stable llm-rubric scoring. Every
+# model is judged by Sonnet 5, on the same gateway (ANTHROPIC_BASE_URL and
+# ANTHROPIC_API_KEY).
 defaultTest:
   options:
     provider:
-      id: '{{ env.PROMPTFOO_GRADING_PROVIDER | default("vertex:claude-sonnet-5", true) }}'
+      id: 'anthropic:messages:claude-sonnet-5'
       config:
-        # Reuse the agent's Vertex project/region (CLOUD_ML_REGION, e.g. global)
-        # so agent and judge share one region var. `make preflight` fails fast
-        # if either is unset (otherwise these interpolate to empty).
-        projectId: '{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}'
-        region: '{{ env.CLOUD_ML_REGION }}'
         # Leave room for Claude's thinking plus the rubric response.
-        max_tokens: &grader_max_tokens 4096
-        # HTTP client settings, used only when OpenShell selects `https`.
-        # The sandbox proxy replaces the placeholder token with a real one.
-        url: 'https://aiplatform.googleapis.com/v1/projects/{{ env.ANTHROPIC_VERTEX_PROJECT_ID }}/locations/{{ env.CLOUD_ML_REGION }}/publishers/anthropic/models/claude-sonnet-5:rawPredict'
-        method: POST
-        headers:
-          Authorization: 'Bearer {{ env.GOOGLE_VERTEX_AI_TOKEN }}'
-          Content-Type: application/json
-        body:
-          anthropic_version: vertex-2023-10-16
-          max_tokens: *grader_max_tokens
-          messages:
-            - role: user
-              content: '{{ prompt }}'
-        transformResponse: 'json.content[0].text'
+        max_tokens: 4096
+    # promptfoo passes an llm-rubric check only if the judge's "pass" is true
+    # AND score >= the check's threshold. The judge sets pass for any score
+    # above 0, so every llm-rubric needs an explicit threshold. This decides
+    # each check's pass mark; a test's pass comes from its weighted score.
     rubricPrompt: file://graders/judge-prompt.txt
+  # A test passes when its weighted score is at least 0.9, so one minor miss no
+  # longer fails it. Checks that must still fail a test on their own carry more
+  # weight (safety in T2; topology-preservation and partner-profile-unchanged
+  # in T4). cost and latency carry 0.1 each, so they lower the score but cannot
+  # fail a test, even together (T3 has the least other weight, 2: 2/2.2 = 0.91).
+  threshold: 0.9
   assert:
     - type: cost
       threshold: 3.00
       metric: cost
+      weight: 0.1
     - type: latency
       threshold: 900000  # ms — 15 min total runtime per test (p90 ~8 min, see README.md)
       metric: latency
+      weight: 0.1
 
 tests:
   # ============================================================
@@ -101,12 +90,14 @@ tests:
 
   - description: "T1 EXPLAIN — reference diff accuracy and ordering"
     vars:
-      prompt: "what changed between RDS 4.18 and 4.20?"
+      prompt: "what changed between RDS 4.18 and 4.20? use the local reference directories ref-4.18/ and ref-4.20/ as the 4.18 and 4.20 references"
     assert:
       - type: skill-used
         value: rds-policy-update
         metric: skill-activation
       # --- Semantic: does the explanation cover each ref difference? ---
+      # The agent's chat reply may only summarize explain.md, so each rubric
+      # also sees the .md files it wrote (enrich_output).
       - type: llm-rubric
         value: |
           The output mentions the TunedPerformancePatch changes between
@@ -114,6 +105,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-tuned
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions the GVK migration from ICSP to IDMS
@@ -122,6 +114,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-gvk
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions that ConsoleOperatorDisable changed and
@@ -132,6 +125,7 @@ tests:
           mentioned but not connected, 0.0 if either is absent.
         threshold: 0.5
         metric: explain-console
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions that NMStateOperator was removed from the
@@ -140,6 +134,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-nmstate
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions PTP scheduling changes — new ptpSchedulingPolicy
@@ -150,6 +145,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-ptp
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions the StorageLV changes: wave changed from 2 to 10,
@@ -157,6 +153,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-storagelv
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions the SubscriptionOCP channel change from
@@ -164,6 +161,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-subscription
+        transform: file://assertions/common.py:enrich_output
       - type: llm-rubric
         value: |
           The output mentions the SriovFecClusterConfig change — a priority
@@ -171,6 +169,7 @@ tests:
           Score 1.0 if clearly described, 0.5 if briefly mentioned, 0.0 if absent.
         threshold: 0.5
         metric: explain-sriovfec
+        transform: file://assertions/common.py:enrich_output
       # --- Workflow: EXPLAIN must come before asking for merge inputs ---
       - type: llm-rubric
         value: |
@@ -181,6 +180,7 @@ tests:
           the reference changes, score 0.0. If EXPLAIN came first, score 1.0.
         threshold: 1.0
         metric: workflow
+        transform: file://assertions/common.py:enrich_output
 
   # ============================================================
   # T2: COMPREHENSIVE MERGE — all merge behaviors + safety
@@ -225,7 +225,7 @@ tests:
   #   1. Activation + safety       skill loaded, no unsafe kubectl apply
   #   2. Artifact checks           expected files written, PG structure valid
   #   3. Deterministic file checks config-driven YAML content verification
-  #   4. Version sweep             no source version remaining in output
+  #   4. Version sweep             no unflagged source version left in output
   #   5. YAML nesting validation   data/spec not nested under metadata
   #   6. Semantic rubric checks    LLM judge scores communication quality
   #   7. Logging                   AskUserQuestion call recording
@@ -233,7 +233,7 @@ tests:
 
   - description: "T2 COMPREHENSIVE MERGE — all merge behaviors"
     vars:
-      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-comprehensive/ which has three PolicyGenerator files and a kustomization.yaml. do the full EXPLAIN and MERGE end-to-end, use recommended defaults for any conflicts"
+      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-comprehensive/ which has three PolicyGenerator files and a kustomization.yaml. use the local reference directories ref-4.18/ and ref-4.20/ as the 4.18 and 4.20 references. do the full EXPLAIN and MERGE end-to-end, use recommended defaults for any conflicts"
     assert:
       # ----- 1. Activation + safety -----
       - type: skill-used
@@ -351,7 +351,10 @@ tests:
               cr: "ImageBasedUpgrade"
 
       # ----- 4. Version sweep (CNF-23295) -----
-      # No source version (4.18) should remain in the output PG files.
+      # No source version (4.18) should remain in the output PG files
+      # unless checklist.md or the final output flags it for review (the
+      # skill keeps version-pinned values such as the IBU seedImageRef).
+      # target-ocp-version must be updated even when flagged.
       # Catches missed version bumps in metadata, namespaces, channels,
       # labels, annotations, and arbitrary fields.
       - type: python
@@ -462,6 +465,7 @@ tests:
           with removal context, 0.0 if not mentioned.
         threshold: 0.5
         metric: mustnothave-warning
+        transform: file://assertions/common.py:enrich_output
       # Does it handle the Tuned restructure AND preserve partner sections? (A5/B6/B8)
       - type: llm-rubric
         value: |
@@ -490,6 +494,7 @@ tests:
           0.5 if mentioned without cleanup suggestion, 0.0 if not flagged.
         threshold: 0.5
         metric: redundant-overlay
+        transform: file://assertions/common.py:enrich_output
       # Does it report which reference CRs the partner doesn't use?
       - type: llm-rubric
         value: |
@@ -637,7 +642,7 @@ tests:
 
   - description: "T3 REQUIRED CR SEVERITY — distinguish required vs optional missing CRs"
     vars:
-      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-required-cr/, go ahead with the full upgrade"
+      prompt: "upgrade my policies from 4.18 to 4.20. the policy source is partner-required-cr/. use the local reference directories ref-4.18/ and ref-4.20/ as the 4.18 and 4.20 references, and go ahead with the full upgrade"
     assert:
       - type: skill-used
         value: rds-policy-update
@@ -698,9 +703,14 @@ tests:
         config:
           target_version: "4.20"
           checks:
+            # The channel after patches: dropping the partner's stable-4.18
+            # patch, which only restated the old default, also passes,
+            # since the 4.20 base CR has stable-4.20
             - name: subscription_channel_bumped
+              type: effective
               cr: "source-crs/SubscriptionOCP.yaml"
-              path: "patches[].spec.channel"
+              field: "spec.channel"
+              reference: "ref-mn-4.20"
               contains: "stable-4.20"
             # Built from the reference PerformanceProfile (so the 4.20
             # change reaches it) and still bound to the partner's pool
@@ -711,6 +721,21 @@ tests:
             - name: deviating_profile_kept
               type: exists
               cr: "custom-crs/PerformanceProfile-rt.yaml"
+
+      # Deterministic: worker-1's real-time profile is the partner's own, so
+      # the agent flags it and leaves it alone, even when it asked and got
+      # "add it" back. Weighted so that editing it fails the test whatever
+      # the judge scores topology-preservation.
+      - type: python
+        value: file://assertions/merge.py:check_file_content
+        metric: partner-profile-unchanged
+        weight: 2
+        config:
+          checks:
+            - name: deviating_profile_unchanged
+              type: unchanged
+              cr: "custom-crs/PerformanceProfile-rt.yaml"
+              source: "partner-multinode"
 
       # Deterministic: output keeps exactly the partner's pools (from
       # partner-multinode/acme-core-v4-18.yaml) -- none dropped, no
@@ -749,12 +774,18 @@ tests:
              not override additionalKernelArgs, so inheriting the change
              from the updated 4.20 base CR counts as applying it; it does
              not need to be added to the patch.
-          4. Warn that worker-1's real-time profile matches none of the
-             reference pool configurations (a deviation for the partner
-             to review), while keeping it unchanged and NOT adding another
-             PerformanceProfile for worker-1. Merely listing it as
-             preserved custom content, without calling out the mismatch,
-             does not count.
+          4. Tell the partner that worker-1's real-time profile deviates
+             from the reference, while keeping it unchanged and NOT adding
+             another PerformanceProfile for worker-1. Any statement of how
+             this profile differs from what the reference provides meets
+             this criterion fully, whatever the wording. For example: it
+             matches no reference pool or profile; it is real-time where
+             the reference profiles are not; or it is a standalone, forked
+             or custom copy of the reference profile, so it does not get
+             reference changes such as module_blacklist=irdma. It is NOT
+             met if the agent only lists the file as preserved, unchanged
+             or custom content without saying how it differs from the
+             reference.
           Score 1.0 if all four hold, 0.5 if the partner's topology is
           preserved but the agent asked which to use, did not carry the
           PerformanceProfile change to worker-cnf, or did not warn about
@@ -763,4 +794,6 @@ tests:
           pool, or rewrote or replaced worker-1's profile.
         threshold: 1.0
         metric: topology-preservation
+        # Half credit here must still fail the test at the 0.9 threshold.
+        weight: 2
         transform: file://assertions/common.py:enrich_output
