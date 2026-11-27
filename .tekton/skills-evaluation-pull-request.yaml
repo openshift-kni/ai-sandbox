@@ -1,0 +1,139 @@
+# Tenant values are PaC Repository custom parameters; see .tekton/README.md.
+# The evaluator comes from the supplied GitHub repo with its defaults unchanged.
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: skills-evaluation-on-pull-request
+  annotations:
+    build.appstudio.openshift.io/repo: 'https://github.com/openshift-kni/ai-sandbox/tree/{{revision}}'
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+    pipelinesascode.tekton.dev/cancel-in-progress: 'true'
+    pipelinesascode.tekton.dev/max-keep-runs: '3'
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "pull_request" && target_branch == "main" &&
+      ("agentic-plugins/rh-telco/skills/rds-policy-update/**".pathChanged() ||
+       ".tekton/**".pathChanged())
+  labels:
+    appstudio.openshift.io/application: '{{konflux_application}}'
+    appstudio.openshift.io/component: '{{konflux_component}}'
+    pipelines.appstudio.openshift.io/type: build
+spec:
+  timeouts:
+    pipeline: 1h
+    tasks: 55m
+    finally: 5m
+  params:
+    - name: git-url
+      value: '{{source_url}}'
+    - name: revision
+      value: '{{revision}}'
+    - name: source-image
+      value: '{{artifact_storage}}:on-pr-{{revision}}.git'
+  pipelineSpec:
+    description: >-
+      Evaluate rds-policy-update using the shared Task's default behavior.
+      Run on pull requests to main that change the skill or Konflux configuration.
+    params:
+      - name: git-url
+        type: string
+        description: Source repository URL supplied by Pipelines-as-Code.
+      - name: revision
+        type: string
+        description: PR revision supplied by Pipelines-as-Code.
+      - name: source-image
+        type: string
+        description: Writable OCI reference for the trusted source artifact.
+      - name: image-expires-after
+        type: string
+        default: 5d
+        description: Expiration of the trusted source artifact.
+    results:
+      - name: TEST_OUTPUT_TIER_A
+        description: Native Tier A result from the evaluator.
+        value: $(tasks.evaluate-skill.results.TEST_OUTPUT_TIER_A)
+      - name: TEST_OUTPUT_TIER_B
+        description: Native Tier B result from the evaluator.
+        value: $(tasks.evaluate-skill.results.TEST_OUTPUT_TIER_B)
+      - name: CHAINS-GIT_URL
+        value: $(tasks.clone-repository.results.url)
+      - name: CHAINS-GIT_COMMIT
+        value: $(tasks.clone-repository.results.commit)
+    tasks:
+      - name: init
+        taskRef:
+          resolver: bundles
+          params:
+            - name: name
+              value: init
+            - name: bundle
+              value: quay.io/konflux-ci/tekton-catalog/task-init:0.4.3@sha256:7854d7babe4136e53e337f6433d952532314433b48bb62b422ddc02700934d85
+            - name: kind
+              value: task
+        params:
+          - name: enable-cache-proxy
+            value: 'false'
+      - name: clone-repository
+        runAfter: [init]
+        taskRef:
+          resolver: bundles
+          params:
+            - name: name
+              value: git-clone-oci-ta
+            - name: bundle
+              value: quay.io/konflux-ci/tekton-catalog/task-git-clone-oci-ta:0.2.6@sha256:a3678910c2bf9187a66a96066193cb41046fbb7097160bf2be6a374ed5e49d30
+            - name: kind
+              value: task
+        params:
+          - name: url
+            value: $(params.git-url)
+          - name: revision
+            value: $(params.revision)
+          - name: ociStorage
+            value: $(params.source-image)
+          - name: ociArtifactExpiresAfter
+            value: $(params.image-expires-after)
+        workspaces:
+          - name: basic-auth
+            workspace: git-auth
+      - name: evaluate-skill
+        runAfter: [clone-repository]
+        timeout: 40m
+        taskRef:
+          resolver: git
+          params:
+            - name: url
+              value: https://github.com/RHEcosystemAppEng/konflux-ai5-evaluation.git
+            - name: revision
+              value: 383c76c5dc4bdaf7b8ff371cd13328b6868a233e
+            - name: pathInRepo
+              value: task/aeh-skill-eval/aeh-skill-eval.yaml
+        params:
+          - name: submission-dir
+            value: agentic-plugins/rh-telco/rds-policy-update
+          - name: submission-revision
+            value: $(params.revision)
+          - name: source-artifact
+            value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
+        workspaces:
+          - name: source
+            workspace: shared-workspace
+    workspaces:
+      - name: git-auth
+        optional: true
+      - name: shared-workspace
+        description: Evaluator scratch space; source transfers use trusted artifacts.
+  taskRunTemplate:
+    serviceAccountName: '{{build_service_account}}'
+  workspaces:
+    - name: git-auth
+      secret:
+        secretName: '{{git_auth_secret}}'
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 2Gi
