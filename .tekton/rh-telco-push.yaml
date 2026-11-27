@@ -64,9 +64,9 @@ spec:
   - name: insecure-ssl
     value: 'false'
   - name: evaluation-image
-    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.1-runner@sha256:2ad555cf14f959f160f74b69ea6450c51b161c656814f447025f308d8600e9e5
+    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.1-runner@sha256:cea565bf0df3e40389b59d623d9ffc3c28aeee3e31781ca6057860ae3c885baf
   - name: trial-image
-    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.1-trial@sha256:63f467d1d63ad827abe2dd19da59c5af6e4a2af8e9235be6b154bb92dddf2249
+    value: quay.io/ecosystem-appeng/agent-eval-harness:v5.1-trial@sha256:f8df7e7bcc9d7e8ac58f3959976372773198238b1f43e13302f843f147cb8be7
   - name: agent-api-base
     value: https://api.enmaas.devshift.net
   - name: llm-api-base
