@@ -5,6 +5,7 @@ description: Fixture-backed RDS 4.18 to 4.20 policy upgrade evaluations for RAN 
 version: 0.1.0
 eval_engine: aeh
 aeh_mode: pairwise
+reasoning_effort: low
 agent_timeout_sec: 900
 gate_policy:
   default_mode: warn

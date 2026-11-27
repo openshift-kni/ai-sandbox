@@ -81,8 +81,6 @@ spec:
     value: anthropic/rits/zai-org/glm-5-3
   - name: aeh-judge-model-override
     value: anthropic:/rits/zai-org/glm-5-3
-  - name: aeh-reasoning-effort
-    value: low
   - name: skill-review
     value: 'true'
   - name: submission-review
